@@ -1,0 +1,65 @@
+# =====================================================================
+# Default experiment config — Late Fusion (XLM-R + FT-Transformer)
+# =====================================================================
+
+seed: 42
+
+# ---------- Data ----------
+data:
+  raw_path:        "data/raw/crawled_emotions.xlsx"
+  processed_dir:   "data/processed"
+  text_column:     "text"
+  label_column:    "label"
+  # 7-way Ekman emotions + Neutral (matches the crawled dataset).
+  class_names: ["joy", "sadness", "anger", "fear", "disgust", "surprise", "neutral"]
+  numerical_cols:
+    - "post_count"
+    - "comment_count"
+    - "avg_likes"
+    - "session_duration"
+  categorical_cols:
+    - "device"
+    - "account_type"
+    - "region"
+  test_size: 0.15
+  val_size:  0.15
+
+# ---------- Tokenizer / Text ----------
+text:
+  model_name:    "xlm-roberta-base"
+  max_length:    128
+  pooling:       "cls"          # cls | mean
+  freeze_encoder: false
+  teencode_dict_path: "data/external/teencode.json"
+
+# ---------- FT-Transformer ----------
+tabular:
+  d_token:            192
+  n_blocks:           3
+  attention_n_heads:  8
+  ffn_d_hidden:       256
+  dropout:            0.1
+
+# ---------- Fusion head ----------
+fusion:
+  hidden_dim: 256
+  dropout:    0.2
+  n_classes:  7
+
+# ---------- Training ----------
+training:
+  output_dir: "models"
+  epochs: 10
+  batch_size: 32
+  learning_rate: 2.0e-5
+  weight_decay: 0.01
+  warmup_ratio: 0.1
+  grad_clip_norm: 1.0
+  mixed_precision: true
+  early_stopping_patience: 3
+  device: "cuda"
+
+# ---------- Logging ----------
+logging:
+  tensorboard_dir: "reports/runs"
+  log_interval_steps: 50
