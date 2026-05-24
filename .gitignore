@@ -52,33 +52,25 @@ ipython_config.py
 # =========================
 # ML / DL artifacts
 # =========================
+# Tránh push dữ liệu (raw/processed/external) lên Git
+data/raw/*
+data/processed/*
+data/external/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/external/.gitkeep
 
-# ── Data files: tất cả đều nhỏ (< 10 MB) → track trực tiếp ───────────────
-# Không có rule ignore cho data/ nữa — mọi file đều được git track.
-# Ngoại lệ duy nhất: file tạm sinh ra khi chạy (nếu có)
-data/processed/pseudo_labeled_apify.csv   # sinh ra bởi pseudo_label_apify.py — có thể lớn
-
-# ── Model weights ─────────────────────────────────────────────────────────
-# pytorch_model.bin / model.safetensors sau training ~ 500 MB → dùng Git LFS.
-# Config, tokenizer nhỏ → track bình thường (rule !models/**/*.json bên dưới).
+# Model checkpoints, weights, logs
 models/*
 !models/.gitkeep
-!models/**/*.json
-!models/**/*.txt
-!models/**/*.yaml
-!models/**/*.yml
-# Weights lớn: chạy `git lfs track "*.bin"` trước khi push
 *.pt
 *.pth
 *.ckpt
+*.bin
 *.h5
 *.onnx
 *.pkl
 *.joblib
-
-# Reports/figures — track để hiện trong README
-reports/figures/*
-!reports/figures/.gitkeep
 
 # Logs / experiment tracking
 logs/
