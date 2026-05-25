@@ -78,6 +78,17 @@ CRAWLED_CODE_TO_LABEL = {
     "dis": "disgust", "sur": "surprise", "neu": "neutral",
 }
 
+UIT_VSMEC_LABEL_MAP = {
+    "Enjoyment": "joy",   "enjoyment": "joy",
+    "Sadness":   "sadness", "sadness": "sadness",
+    "Anger":     "anger",   "anger":   "anger",
+    "Fear":      "fear",    "fear":    "fear",
+    "Disgust":   "disgust", "disgust": "disgust",
+    "Surprise":  "surprise","surprise":"surprise",
+    "Other":     "neutral", "other":   "neutral",
+    "Joy":       "joy",     "Neutral": "neutral",
+}
+
 # Regexes used to derive surface "behavior" features from raw text.
 _RE_EMOJI_TOKEN = re.compile(r"\[[A-Z_]+\]")               # post-normalize emoji tokens
 _RE_LATIN_WORD  = re.compile(r"\b[A-Za-z]{3,}\b")          # 3+ char latin words
@@ -89,12 +100,7 @@ _RE_URL         = re.compile(r"https?://\S+")
 # Data prep
 # =========================================================================== #
 def load_raw(path: Path) -> pd.DataFrame:
-    """Load the crawled Excel dataset and project to canonical schema.
-
-    Returns a DataFrame with columns ``raw_text`` (untouched) + ``label``
-    (canonical 7-way name). We carry both the raw and (later) normalized text
-    through the pipeline so each experiment can pick the variant it needs.
-    """
+    """Load the crawled Excel dataset and project to canonical schema."""
     df = pd.read_excel(path)
     out = pd.DataFrame({
         "raw_text": df["Text"].astype(str),
@@ -106,6 +112,28 @@ def load_raw(path: Path) -> pd.DataFrame:
     out = out.dropna(subset=["raw_text", "label"]).reset_index(drop=True)
     out = out[out["label"].isin(CLASS_NAMES)].reset_index(drop=True)
     logger.info("Loaded %d rows from %s.", len(out), path)
+    return out
+
+
+def load_uit_vsmec(path: Path) -> pd.DataFrame:
+    """Load UIT-VSMEC CSV and project to canonical schema (raw_text + label)."""
+    if not path.exists():
+        logger.warning("UIT-VSMEC not found at %s — skipping.", path)
+        return pd.DataFrame(columns=["raw_text", "label"])
+    df = pd.read_csv(path)
+    # Support both column-name conventions found in different releases.
+    text_col  = next((c for c in ["Sentence", "sentence", "text", "Text"] if c in df.columns), None)
+    label_col = next((c for c in ["Emotion",  "emotion",  "label", "Label"] if c in df.columns), None)
+    if text_col is None or label_col is None:
+        logger.error("UIT-VSMEC: cannot detect text/label columns in %s", path)
+        return pd.DataFrame(columns=["raw_text", "label"])
+    out = pd.DataFrame({
+        "raw_text": df[text_col].astype(str),
+        "label":    df[label_col].astype(str).map(UIT_VSMEC_LABEL_MAP),
+    })
+    out = out.dropna(subset=["raw_text", "label"]).reset_index(drop=True)
+    out = out[out["label"].isin(CLASS_NAMES)].reset_index(drop=True)
+    logger.info("Loaded %d rows from UIT-VSMEC (%s).", len(out), path)
     return out
 
 
@@ -318,6 +346,11 @@ def main(args: argparse.Namespace) -> None:
 
     # ---- Load + split (identical seed across experiments → same rows) ----
     raw = load_raw(Path(args.raw))
+    if args.uit_vsmec:
+        vsmec = load_uit_vsmec(Path(args.uit_vsmec))
+        if not vsmec.empty:
+            raw = pd.concat([raw, vsmec], ignore_index=True)
+            logger.info("Merged UIT-VSMEC: total %d rows.", len(raw))
 
     # Normalize once for variants that need normalized text. We do NOT dedupe
     # here because we want the SAME rows used in each experiment — only the
@@ -399,6 +432,8 @@ def parse_args() -> argparse.Namespace:
                     "XLM-R only / +Teencode / Full Fusion.",
     )
     p.add_argument("--raw", type=str, default="data/raw/crawled_emotions.xlsx")
+    p.add_argument("--uit-vsmec", type=str, default=None,
+                   help="Path to UIT-VSMEC.csv (optional, merged with --raw).")
     p.add_argument("--output-dir", type=str, default="models/ablation")
     p.add_argument("--text-model", type=str, default="xlm-roberta-base")
     p.add_argument("--epochs", type=int, default=4)
