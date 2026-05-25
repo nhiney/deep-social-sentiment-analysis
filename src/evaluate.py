@@ -309,6 +309,9 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--device", type=str, default="auto",
                         help="'auto' | 'cpu' | 'cuda' | 'cuda:N'")
+    parser.add_argument("--output-dir", type=str, default=None,
+                        help="Directory to write metrics.json and confusion_matrix.npy. "
+                             "If omitted, results are only printed.")
     return parser.parse_args()
 
 
@@ -340,14 +343,20 @@ def main() -> None:
     model = LateFusionModel.from_pretrained(args.checkpoint)
     tokenizer = AutoTokenizer.from_pretrained(model.config.text_model_name)
 
+    # ---- Load tabular preprocessor ----
+    import joblib
+    tab_pp_path = Path(args.checkpoint) / "tab_preprocessor.joblib"
+    if tab_pp_path.exists():
+        tab_pp = joblib.load(tab_pp_path)
+        logger.info("Loaded tab_preprocessor from %s", tab_pp_path)
+    else:
+        logger.warning("tab_preprocessor.joblib not found in checkpoint — using empty preprocessor (tabular features will be zeros)")
+        df_tmp = pd.read_parquet(args.data)
+        tab_pp = TabularPreprocessor(numerical_cols=[], categorical_cols=[]).fit(df_tmp)
+
     # ---- Build dataset ----
     df = pd.read_parquet(args.data)
     label_to_id = {name: i for i, name in enumerate(args.class_names)}
-    # Use an empty TabularPreprocessor unless the model expects features —
-    # the parquet is already normalized so we don't need a teencode normalizer.
-    tab_pp = TabularPreprocessor(
-        numerical_cols=[], categorical_cols=[],
-    ).fit(df)
     dataset = SocialSentimentDataset(
         dataframe=df,
         text_column=args.text_column,
@@ -370,6 +379,22 @@ def main() -> None:
         logger.info("  %-20s %.4f", k, v)
     logger.info("\nClassification report:\n%s", report["report"])
     logger.info("\nConfusion matrix:\n%s", report["confusion_matrix"])
+
+    # ---- Save outputs ----
+    if args.output_dir:
+        import json as _json
+        out_dir = Path(args.output_dir)
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        metrics_payload = {**report["overall"]}
+        if "per_class" in report:
+            metrics_payload["per_class"] = report["per_class"]
+        with (out_dir / "metrics.json").open("w", encoding="utf-8") as fh:
+            _json.dump(metrics_payload, fh, ensure_ascii=False, indent=2)
+        logger.info("Saved metrics.json → %s", out_dir / "metrics.json")
+
+        np.save(str(out_dir / "confusion_matrix.npy"), report["confusion_matrix"])
+        logger.info("Saved confusion_matrix.npy → %s", out_dir / "confusion_matrix.npy")
 
 
 if __name__ == "__main__":
