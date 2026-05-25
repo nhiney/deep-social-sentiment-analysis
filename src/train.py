@@ -569,10 +569,10 @@ def main() -> None:
         fusion_dropout=cfg_yaml["fusion"]["dropout"],
         n_classes=cfg_yaml["fusion"]["n_classes"],
     )
-    training_config = TrainingConfig(
-        output_dir=args.output_dir,
-        **cfg_yaml["training"],
-    )
+    train_cfg = dict(cfg_yaml["training"])
+    if args.output_dir:
+        train_cfg["output_dir"] = args.output_dir
+    training_config = TrainingConfig(**train_cfg)
 
     # ---- Datasets ----
     train_df = pd.read_parquet(args.train_data)
