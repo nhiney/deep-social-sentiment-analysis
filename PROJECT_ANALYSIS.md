@@ -1,6 +1,6 @@
 # Phân tích toàn diện đồ án: Deep Social Sentiment Analysis
 > Tài liệu nội bộ — tổng hợp hiện trạng, lộ trình hoàn thiện và chiến lược đạt điểm xuất sắc  
-> Cập nhật lần cuối: **2026-05-25 (buổi 5)**
+> Cập nhật lần cuối: **2026-05-25 (buổi 6)**
 
 ---
 
@@ -160,15 +160,15 @@ deep-social-sentiment-analysis/
 │   │   ├── crawled_emotions.xlsx       # ✅ 2034 mẫu tự crawl (7 cảm xúc)
 │   │   └── unlabeled_new_posts.json    # ✅ MỚI — 999 posts Facebook (Apify scrape)
 │   ├── processed/
-│   │   ├── train.parquet               # ✅ 1238 mẫu
-│   │   ├── val.parquet                 # ✅ 265 mẫu
-│   │   ├── test.parquet                # ✅ 266 mẫu
+│   │   ├── train.parquet               # ✅ 6731 mẫu (sau merge 3 sources)
+│   │   ├── val.parquet                 # ✅ 1443 mẫu
+│   │   ├── test.parquet                # ✅ 1442 mẫu
 │   │   └── cleaned_unlabeled_posts.csv # ✅ MỚI — 990 posts sạch (12 features)
 │   └── external/
 │       ├── sample_batch.csv            # ✅ Sample cho batch demo
 │       └── teencode.json               # ✅ MỚI (B5) — 170+ slang entries mở rộng
 │
-├── models/                             # ❌ RỖNG — chưa có checkpoint
+├── models/                             # ✅ best_model/ trên Google Drive (1116.9 MB)
 │
 ├── notebooks/
 │   ├── 01_eda.ipynb                    # ✅ MỚI (B3) — 10 sections EDA, 10 figures, word clouds
@@ -182,7 +182,10 @@ deep-social-sentiment-analysis/
 │   │   ├── violin_interaction_per_emotion.png
 │   │   ├── text_length_per_emotion.png
 │   │   └── mean_interaction_heatmap.png
-│   └── ablation_results.csv            # ❌ CHƯA CÓ — cần chạy training
+│   ├── ablation_results.csv            # ✅ MỚI (B6) — 3 experiments
+│   ├── ablation_results.md             # ✅ MỚI (B6)
+│   ├── metrics.json                    # ✅ MỚI (B6) — test set metrics
+│   └── confusion_matrix.npy            # ✅ MỚI (B6)
 │
 ├── scripts/
 │   ├── prepare_data.py                 # ✅ (B4 update) Multi-source merge + tabular cols
@@ -519,6 +522,65 @@ python -m scripts.download_uit_vsmec --prepare \
 
 ---
 
+### 📅 Buổi 6 — 2026-05-25 (Training + Evaluate + Ablation trên Colab)
+
+**Đã làm:**
+
+#### ✅ 1. Fix 3 bugs runtime phát hiện khi chạy Colab
+
+| Bug | File | Mô tả | Fix |
+|---|---|---|---|
+| Duplicate kwarg `output_dir` | `src/train.py:572` | `TrainingConfig(output_dir=args.output_dir, **cfg)` crash khi cfg đã chứa `output_dir` | Merge vào dict trước khi unpack |
+| Empty TabularPreprocessor | `src/evaluate.py:348` | Script tạo preprocessor rỗng (0 features) thay vì load từ checkpoint → tensor size mismatch | Load `tab_preprocessor.joblib` từ checkpoint dir |
+| Thiếu `--output-dir` | `src/evaluate.py` | Không save `metrics.json` | Thêm arg + save metrics.json + confusion_matrix.npy |
+| Thiếu `--uit-vsmec` | `scripts/run_ablation.py` | Ablation chỉ dùng crawled data | Thêm `load_uit_vsmec()` + arg + merge trước split |
+
+#### ✅ 2. Training hoàn tất (Google Colab T4 GPU)
+
+- **Dataset:** 9616 mẫu (crawled 2034 + UIT-VSMEC 6927 + pseudo-labeled 655)
+- **Splits:** train=6731 | val=1443 | test=1442
+- **Early stopped:** epoch 7/10 (patience=3, best epoch 4)
+- **Best val:** loss=0.9520, F1-Macro=0.6562, Accuracy=0.6803
+- **Thời gian:** ~9 phút 26 giây
+- **Checkpoint:** `pytorch_model.bin` (1116.9 MB) + `tab_preprocessor.joblib` → Google Drive
+
+| Epoch | Train Loss | Val Loss | Val F1-Macro | Ghi chú |
+|---|---|---|---|---|
+| 1 | 1.8222 | 1.4333 | 0.3929 | New best |
+| 2 | 1.2979 | 1.0966 | 0.5423 | New best |
+| 3 | 0.9752 | 0.9924 | 0.6321 | New best |
+| 4 | 0.7893 | 0.9520 | 0.6562 | **🏆 Best** |
+| 5 | 0.6340 | 0.9530 | 0.6713 | — |
+| 6 | 0.5095 | 0.9676 | 0.6812 | — |
+| 7 | 0.4121 | 1.0151 | 0.6797 | Early stop |
+
+#### ✅ 3. Evaluate trên test set
+
+| Metric | Giá trị |
+|---|---|
+| **F1-Macro** | **0.6877** |
+| Accuracy | 0.7020 |
+| F1-Weighted | 0.7029 |
+| Precision-Macro | 0.6976 |
+| Recall-Macro | 0.6874 |
+
+Per-class F1: joy=0.7893 | sadness=0.7431 | surprise=0.8243 | fear=0.7205 | neutral=0.6081 | disgust=0.5871 | anger=0.5413
+
+#### ✅ 4. Ablation study hoàn tất (3 experiments × 5 epochs, 8961 mẫu)
+
+| Experiment | F1-Macro | Accuracy | Thời gian |
+|---|---|---|---|
+| exp1 — XLM-R only (raw text) | 0.6235 | 0.6424 | — |
+| exp2 — XLM-R + Teencode | **0.6548** | **0.6647** | — |
+| exp3 — Full Fusion (+ Tabular) | 0.6454 | 0.6587 | — |
+| **Tổng** | | | ~23.8 phút |
+
+**Nhận xét:** Teencode normalization đóng góp +3.1 F1 (exp2 vs exp1). Tabular branch với text-derived proxy features giảm nhẹ 0.9 F1 — real engagement features (likes/comments) cần nhiều labeled data hơn để lấn át noise.
+
+**Tổng kết buổi 6:** Training + Evaluate + Ablation hoàn tất. README cập nhật số thật. Còn lại: điền số vào notebook 02, SHAP/Captum (điểm cộng).
+
+---
+
 ## 5. Hiện trạng tổng thể
 
 ### 5.1 Bảng đánh giá module
@@ -551,8 +613,9 @@ python -m scripts.download_uit_vsmec --prepare \
 | Processed data (unlabeled) | `data/processed/cleaned_unlabeled_posts.csv` | ✅ | ⭐⭐⭐⭐ | 990 posts, 12 features |
 | EDA Figures | `reports/figures/` | ✅ | ⭐⭐⭐⭐⭐ | 6+ publication-quality figures |
 | **Teencode dictionary** | **`data/external/teencode.json`** | **✅ 100%** | **⭐⭐⭐⭐⭐** | **MỚI (B5)** — 170+ entries gen-Z + social |
-| Model checkpoint | `models/` | ❌ 0% | — | **BLOCKER** — chưa train |
-| Ablation results | `reports/ablation_results.csv` | ❌ 0% | — | **BLOCKER** — cần training xong trước |
+| Model checkpoint | `models/best_model/` | ✅ 100% | ⭐⭐⭐⭐⭐ | **MỚI (B6)** — val F1=0.6562, trên Drive |
+| Ablation results | `reports/ablation_results.csv` | ✅ 100% | ⭐⭐⭐⭐⭐ | **MỚI (B6)** — 3 experiments |
+| Test metrics | `reports/metrics.json` | ✅ 100% | ⭐⭐⭐⭐⭐ | **MỚI (B6)** — F1-Macro=0.6877 |
 | EDA Notebook | `notebooks/01_eda.ipynb` | ✅ 100% | ⭐⭐⭐⭐⭐ | MỚI B3 — 10 sections, 10 figures |
 | **Model Analysis Notebook** | **`notebooks/02_model_analysis.ipynb`** | **✅ 100%** | **⭐⭐⭐⭐⭐** | **MỚI (B5)** — template + synthetic data, sẵn sàng điền số thật |
 | Unit tests API | `tests/test_api.py` | ✅ 100% | ⭐⭐⭐⭐⭐ | MỚI B3 — 25 tests |
@@ -565,13 +628,13 @@ python -m scripts.download_uit_vsmec --prepare \
 Infrastructure code:    ████████████████████  100% ✅
 Data pipeline:          ████████████████████  100% ✅ (download script + pseudo-label + merge xong)
 EDA & Visualization:    ████████████████████  100% ✅ (6 EDA figures + notebook 01 + notebook 02 template)
-Model training:         ░░░░░░░░░░░░░░░░░░░░    0% ❌ BLOCKER — cần GPU
-Evaluation results:     ░░░░░░░░░░░░░░░░░░░░    0% ❌ (chờ training)
-Ablation results:       ░░░░░░░░░░░░░░░░░░░░    0% ❌ (chờ training)
-Demo app (live):        ████░░░░░░░░░░░░░░░░   20% ❌ (cần checkpoint)
+Model training:         ████████████████████  100% ✅ val F1-Macro=0.6562 (B6)
+Evaluation results:     ████████████████████  100% ✅ test F1-Macro=0.6877 (B6)
+Ablation results:       ████████████████████  100% ✅ 3 experiments hoàn tất (B6)
+Demo app (live):        ████░░░░░░░░░░░░░░░░   20% ⚠️  (cần tải checkpoint từ Drive)
 FastAPI service:        ████████████████████  100% ✅ (4 endpoints + tests)
 Tests:                  ████████████████████  100% ✅ (116 tests: 25 API + 64 preprocessing + 27 models)
-Documentation:          ████████████░░░░░░░░   60% ⚠️  (README còn thiếu kết quả thực tế)
+Documentation:          ████████████████████  100% ✅ README cập nhật số thật (B6)
 ```
 
 ---
@@ -580,17 +643,12 @@ Documentation:          ████████████░░░░░░�
 
 ### 6.1 🔴 P0 — Blocker (phải làm trước, không có không bảo vệ được)
 
-#### [P0-1] Model chưa được train lần nào
-- **Hậu quả**: Demo app không chạy, không có F1/accuracy để báo cáo, không bảo vệ được
-- **Cần làm**: Chạy training (yêu cầu GPU)
-- **Command**: `python -m src.train --config configs/config.yaml`
-- **Thời gian ước tính**: ~2-4 giờ với GPU (RTX 3060+), ~20+ giờ trên CPU
+#### ~~[P0-1] Model chưa được train lần nào~~ ✅ DONE buổi 6
+- **Kết quả**: val F1-Macro=0.6562, test F1-Macro=0.6877, Accuracy=0.7020
+- Checkpoint lưu trên Google Drive: `MyDrive/colab_sentiment/models/best_model/`
 
-#### [P0-2] Dữ liệu labeled quá nhỏ — 1769 mẫu cho 7 lớp
-- **Hiện tại**: ~177 mẫu/lớp trung bình
-- **Cần**: UIT-VSMEC (~7000 mẫu, 7 Ekman emotions) — public, free, loader đã viết sẵn
-- **Download script đã có**: `python -m scripts.download_uit_vsmec --prepare --crawled data/raw/crawled_emotions.xlsx`
-- **Link**: https://github.com/uitnlp/UIT-VSMEC
+#### ~~[P0-2] Dữ liệu labeled quá nhỏ~~ ✅ DONE buổi 5+6
+- UIT-VSMEC đã tải (6927 mẫu) + merged → 9616 mẫu tổng
 
 ### 6.2 🟠 P1 — Quan trọng (cần hoàn thiện trước bảo vệ)
 
@@ -602,13 +660,11 @@ Documentation:          ████████████░░░░░░�
 - ~~Scripts EDA đã chạy và tạo được 6 figures, nhưng giảng viên muốn notebook~~
 - **`notebooks/01_eda.ipynb`** hoàn thành — 10 sections, inline figures, narrative explanation
 
-#### [P1-3] Ablation results table chưa tồn tại
-- `reports/ablation_results.csv` chưa có — cần chạy `scripts/run_ablation.py`
-- Đây là **phần quan trọng nhất** của dissertation để chứng minh đóng góp
+#### ~~[P1-3] Ablation results table chưa tồn tại~~ ✅ DONE buổi 6
+- `reports/ablation_results.csv` + `.md` đã có — exp1=0.6235 → exp2=0.6548 → exp3=0.6454
 
-#### [P1-4] README.md chưa có kết quả thực tế
-- Hiện tại README chỉ có mô tả cấu trúc và cách chạy
-- Cần thêm: bảng kết quả, figures, hướng dẫn reproduce
+#### ~~[P1-4] README.md chưa có kết quả thực tế~~ ✅ DONE buổi 6
+- README cập nhật đầy đủ: bảng test metrics, per-class F1, ablation table, reproduce guide
 
 ### 6.3 🟡 P2 — Nâng cao (điểm cộng)
 
@@ -676,27 +732,17 @@ Imbalance ratio joy/disgust = 3.1× → cần class weights (đã implement tron
 [x] 1.1  Fix bug label mapping trong run_ablation.py                ✅ False alarm (B3 verified)
 [x] 1.2  Script tải UIT-VSMEC tự động                               ✅ DONE B5 — scripts/download_uit_vsmec.py
 
-[ ] 1.3  CHẠY download + data preparation (cần Internet):
-         python -m scripts.download_uit_vsmec --prepare \
-             --crawled data/raw/crawled_emotions.xlsx
-         → data/raw/UIT-VSMEC.csv + train/val/test.parquet (~8400 rows)
+[x] 1.3  CHẠY download + data preparation                          ✅ DONE (Colab B6)
+         → 9616 rows: train=6731 | val=1443 | test=1442
 
-[ ] 1.4  Train model (cần GPU):
-         python -m src.train --config configs/config.yaml
-         → Checkpoint lưu vào models/best_model/
-         → Thời gian: ~2-4h (RTX 3060+) | ~20h (CPU)
+[x] 1.4  Train model (Colab T4 GPU, ~9 phút 26 giây)               ✅ DONE B6
+         → val F1-Macro=0.6562 | best epoch 4 | early stop epoch 7
 
-[ ] 1.5  Chạy ablation study (cần GPU, sau 1.4):
-         python -m scripts.run_ablation \
-           --raw data/raw/crawled_emotions.xlsx \
-           --output-dir models/ablation
-         → reports/ablation_results.csv + .md
+[x] 1.5  Chạy ablation study (~23.8 phút, 3 experiments)           ✅ DONE B6
+         → exp1=0.6235 | exp2=0.6548 | exp3=0.6454
 
-[ ] 1.6  Evaluate trên test set:
-         python -m src.evaluate \
-           --checkpoint models/best_model \
-           --data data/processed/test.parquet
-         → F1-Macro, confusion matrix, per-class metrics
+[x] 1.6  Evaluate trên test set                                     ✅ DONE B6
+         → F1-Macro=0.6877 | Accuracy=0.7020
 ```
 
 ### Phase 2 — EDA Notebook + Tài liệu
@@ -712,16 +758,12 @@ Imbalance ratio joy/disgust = 3.1× → cần class weights (đã implement tron
          ablation bar chart, error analysis, LIME examples, summary.
          Dùng synthetic placeholder — sẵn sàng điền số thật sau training.
 
-[ ] 2.3  Điền kết quả thực tế vào notebook 02 (sau 1.6):
-         - Thay synthetic data bằng models/best_model/training_metrics.json
-         - Thay synthetic predictions bằng models/best_model/test_predictions.csv
-         - Chạy lại tất cả cells → export figures
+[ ] 2.3  Điền kết quả thực tế vào notebook 02:
+         - Tải metrics.json + confusion_matrix.npy từ Drive về reports/
+         - Chạy lại tất cả cells → export figures (learning curves, confusion matrix, ablation)
 
-[ ] 2.4  Cập nhật README.md (sau 1.6):
-         - Thêm bảng ablation results thực tế
-         - Thêm bảng so sánh baseline vs full model
-         - Thêm screenshot confusion matrix + LIME example
-         - Cập nhật hướng dẫn reproduce đầy đủ
+[x] 2.4  Cập nhật README.md                                        ✅ DONE B6
+         - Bảng test metrics, per-class F1, ablation table, reproduce guide
 ```
 
 ### Phase 3 — Hoàn thiện kỹ thuật
