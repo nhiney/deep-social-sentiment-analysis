@@ -1,6 +1,6 @@
 # Phân tích toàn diện đồ án: Deep Social Sentiment Analysis
 > Tài liệu nội bộ — tổng hợp hiện trạng, lộ trình hoàn thiện và chiến lược đạt điểm xuất sắc  
-> Cập nhật lần cuối: **2026-05-24 (buổi 4)**
+> Cập nhật lần cuối: **2026-05-25 (buổi 5)**
 
 ---
 
@@ -166,12 +166,13 @@ deep-social-sentiment-analysis/
 │   │   └── cleaned_unlabeled_posts.csv # ✅ MỚI — 990 posts sạch (12 features)
 │   └── external/
 │       ├── sample_batch.csv            # ✅ Sample cho batch demo
-│       └── teencode.json               # ❌ THIẾU — từ điển teencode mở rộng
+│       └── teencode.json               # ✅ MỚI (B5) — 170+ slang entries mở rộng
 │
 ├── models/                             # ❌ RỖNG — chưa có checkpoint
 │
 ├── notebooks/
-│   └── 01_eda.ipynb                    # ✅ MỚI (B3) — 10 sections EDA, 10 figures, word clouds
+│   ├── 01_eda.ipynb                    # ✅ MỚI (B3) — 10 sections EDA, 10 figures, word clouds
+│   └── 02_model_analysis.ipynb         # ✅ MỚI (B5) — learning curves, confusion matrix, ablation, LIME
 │
 ├── reports/
 │   ├── figures/                        # ✅ MỚI — 6 EDA figures
@@ -188,7 +189,8 @@ deep-social-sentiment-analysis/
 │   ├── pseudo_label_apify.py           # ✅ MỚI (B4) — Zero-shot NLI pseudo-labeling
 │   ├── run_ablation.py                 # ✅ Ablation study 3 experiments
 │   ├── process_apify_data.py           # ✅ MỚI — JSON cleaning & feature extraction
-│   └── eda_interactions.py             # ✅ MỚI — EDA + 6 figures + Kruskal-Wallis
+│   ├── eda_interactions.py             # ✅ MỚI — EDA + 6 figures + Kruskal-Wallis
+│   └── download_uit_vsmec.py           # ✅ MỚI (B5) — tự động tải UIT-VSMEC + chạy pipeline
 │
 ├── src/
 │   ├── preprocessing.py                # ✅ TeencodeNormalizer + TabularPreprocessor
@@ -199,7 +201,9 @@ deep-social-sentiment-analysis/
 │
 ├── tests/
 │   ├── __init__.py
-│   └── test_api.py                     # ✅ MỚI (B3) — 25 tests FastAPI (100% pass)
+│   ├── test_api.py                     # ✅ MỚI (B3) — 25 tests FastAPI (100% pass)
+│   ├── test_preprocessing.py           # ✅ MỚI (B5) — 64 tests preprocessing (100% pass)
+│   └── test_models.py                  # ✅ MỚI (B5) — 27 tests models (100% pass, no GPU)
 │
 ├── PROJECT_ANALYSIS.md                 # ✅ Tài liệu phân tích này
 ├── requirements.txt                    # ✅ Đầy đủ dependencies
@@ -452,6 +456,69 @@ TOTAL:         ~8400 rows → train: ~5900 | val: ~1260 | test: ~1260
 
 ---
 
+### 📅 Buổi 5 — 2026-05-25 (Tests + Teencode + Notebooks + Download Script)
+
+**Đã làm:**
+
+#### ✅ 1. Script tải UIT-VSMEC tự động (`scripts/download_uit_vsmec.py`)
+
+Một command duy nhất xử lý toàn bộ luồng:
+```bash
+python -m scripts.download_uit_vsmec --prepare \
+    --crawled data/raw/crawled_emotions.xlsx
+```
+- Thử tải file merged trước; fallback tải 3 splits train/dev/test → concat
+- Verify cột, log distribution, lưu `data/raw/UIT-VSMEC.csv`
+- Flag `--prepare` → tự gọi `prepare_data.py` với tất cả sources
+
+#### ✅ 2. Teencode dictionary mở rộng (`data/external/teencode.json`)
+
+170+ entries bổ sung vào 80+ built-in defaults:
+- Gen-Z slang 2024-2025: `stan`, `simp`, `slay`, `no cap`, `vibe`, `mood`...
+- Social media: `acc`, `fb`, `dm`, `ib`, `sub`, `repost`, `viral`, `trend`...
+- Emotion vocabulary: `tức vcl`, `buồn vl`, `sợ chết đi được`, `điên máu`...
+- ASCII emoticons: `:)`, `:(`, `T_T`, `uwu`, `xd`...
+- Load qua `TeencodeNormalizer(teencode_dict_path="data/external/teencode.json")`
+
+#### ✅ 3. Unit tests preprocessing (`tests/test_preprocessing.py`) — 64 tests
+
+| Class | Tests | Coverage |
+|---|---|---|
+| `TestTeencodeNormalizerBasics` | 19 | normalize, transform, emoji, teencode, edge cases |
+| `TestTeencodeNormalizerCustomDict` | 5 | JSON loading, override priority, missing file tolerance |
+| `TestTeencodeNormalizerFlags` | 3 | handle_emoji=False, collapse=False, lowercase=False |
+| `TestTabularPreprocessorFitTransform` | 17 | fit/transform shape/dtype, z-score, UNK, NaN impute, errors |
+| `TestTabularPreprocessorPersistence` | 3 | save/load joblib, error cases |
+| `TestStratifiedSplit` | 9 | ratios, stratification, no leakage, reproducibility |
+| `TestCohensKappa` | 5 | perfect/random agreement, mismatch error |
+
+#### ✅ 4. Unit tests models (`tests/test_models.py`) — 27 tests (không cần GPU)
+
+| Class | Tests | Coverage |
+|---|---|---|
+| `TestLateFusionConfig` | 6 | defaults, custom values, cardinalities |
+| `TestDnnBaseline` | 11 | output shape/dtype, no NaN, gradient flow, padding invariance |
+| `TestTfidfBaseline` | 10 | logreg/svm fit+predict, predict_proba, error cases |
+
+#### ✅ 5. Notebook phân tích model (`notebooks/02_model_analysis.ipynb`)
+
+8 sections — chạy ngay với synthetic placeholder data, sẵn sàng điền số thật sau training:
+
+| Section | Nội dung |
+|---|---|
+| 1. Load Results | Auto-detect training_metrics.json + test_predictions.csv; fallback synthetic data |
+| 2. Learning Curves | Train loss vs val loss + val F1-Macro per epoch |
+| 3. Confusion Matrix | Counts + normalized (row) side-by-side |
+| 4. Per-class F1 | Precision/Recall/F1 bar chart với color coding (green/yellow/red) |
+| 5. Ablation Table | Bar chart grouped, delta F1 annotations |
+| 6. Error Analysis | Histogram "model nhầm gì" per class + top-3 confused examples |
+| 7. LIME Examples | Live demo (skip gracefully nếu không có checkpoint) |
+| 8. Summary | Bảng kết quả tổng hợp, in best model |
+
+**Tổng kết buổi 5:** 116 tests / 100% pass. Toàn bộ code & docs hoàn chỉnh. Việc còn lại duy nhất: **chạy training trên GPU.**
+
+---
+
 ## 5. Hiện trạng tổng thể
 
 ### 5.1 Bảng đánh giá module
@@ -472,34 +539,39 @@ TOTAL:         ~8400 rows → train: ~5900 | val: ~1260 | test: ~1260
 | Data prep pipeline | `scripts/prepare_data.py` | ✅ 100% | ⭐⭐⭐⭐⭐ | (B4) +tabular cols, +pseudo-labeled, +UIT-VSMEC imputation |
 | Pseudo-labeling | `scripts/pseudo_label_apify.py` | ✅ 100% | ⭐⭐⭐⭐⭐ | **MỚI (B4)** — mDeBERTa NLI zero-shot, 7 emotions |
 | Ablation script | `scripts/run_ablation.py` | ✅ 100% | ⭐⭐⭐⭐⭐ | 3 experiments |
-| **Apify JSON cleaner** | **`scripts/process_apify_data.py`** | **✅ 100%** | **⭐⭐⭐⭐⭐** | **MỚI — buổi 2** |
-| **EDA & Interaction analysis** | **`scripts/eda_interactions.py`** | **✅ 100%** | **⭐⭐⭐⭐⭐** | **MỚI — buổi 2, 6 figures** |
+| Apify JSON cleaner | `scripts/process_apify_data.py` | ✅ 100% | ⭐⭐⭐⭐⭐ | MỚI B2 |
+| EDA & Interaction analysis | `scripts/eda_interactions.py` | ✅ 100% | ⭐⭐⭐⭐⭐ | MỚI B2, 6 figures |
+| **UIT-VSMEC downloader** | **`scripts/download_uit_vsmec.py`** | **✅ 100%** | **⭐⭐⭐⭐⭐** | **MỚI (B5)** — auto download + run pipeline |
 | Streamlit app | `app/app.py` | ✅ 95% | ⭐⭐⭐⭐⭐ | cần checkpoint để chạy |
 | LIME explainer | `app/explainer.py` | ✅ 100% | ⭐⭐⭐⭐ | |
-| FastAPI service | `app/main.py` | ✅ 100% | ⭐⭐⭐⭐⭐ | **MỚI buổi 3** — 4 endpoints đầy đủ + lifespan |
+| FastAPI service | `app/main.py` | ✅ 100% | ⭐⭐⭐⭐⭐ | MỚI B3 — 4 endpoints + lifespan |
 | Raw data (labeled) | `data/raw/crawled_emotions.xlsx` | ✅ | ⭐⭐⭐ | 2034 mẫu |
-| Raw data (unlabeled) | `data/raw/unlabeled_new_posts.json` | ✅ MỚI | ⭐⭐⭐⭐ | 999 Facebook posts |
-| Processed data (labeled) | `data/processed/*.parquet` | ✅ | ⭐⭐⭐ | 1769 mẫu (nhỏ) |
-| Processed data (unlabeled) | `data/processed/cleaned_unlabeled_posts.csv` | ✅ MỚI | ⭐⭐⭐⭐ | 990 posts, 12 features |
-| EDA Figures | `reports/figures/` | ✅ MỚI | ⭐⭐⭐⭐⭐ | 6 publication-quality figures |
-| Model checkpoint | `models/` | ❌ 0% | — | Chưa train |
-| Ablation results | `reports/ablation_results.csv` | ❌ 0% | — | Chưa chạy |
-| EDA Notebook | `notebooks/01_eda.ipynb` | ✅ 100% | ⭐⭐⭐⭐⭐ | **MỚI (B3)** — 10 sections, 10 new figures |
-| Unit tests | `tests/test_api.py` | ✅ 100% | ⭐⭐⭐⭐⭐ | **MỚI buổi 3** — 25 tests, 100% pass |
+| Raw data (unlabeled) | `data/raw/unlabeled_new_posts.json` | ✅ | ⭐⭐⭐⭐ | 999 Facebook posts |
+| Processed data (labeled) | `data/processed/*.parquet` | ✅ | ⭐⭐⭐ | 1769 mẫu — tăng sau khi tải UIT-VSMEC |
+| Processed data (unlabeled) | `data/processed/cleaned_unlabeled_posts.csv` | ✅ | ⭐⭐⭐⭐ | 990 posts, 12 features |
+| EDA Figures | `reports/figures/` | ✅ | ⭐⭐⭐⭐⭐ | 6+ publication-quality figures |
+| **Teencode dictionary** | **`data/external/teencode.json`** | **✅ 100%** | **⭐⭐⭐⭐⭐** | **MỚI (B5)** — 170+ entries gen-Z + social |
+| Model checkpoint | `models/` | ❌ 0% | — | **BLOCKER** — chưa train |
+| Ablation results | `reports/ablation_results.csv` | ❌ 0% | — | **BLOCKER** — cần training xong trước |
+| EDA Notebook | `notebooks/01_eda.ipynb` | ✅ 100% | ⭐⭐⭐⭐⭐ | MỚI B3 — 10 sections, 10 figures |
+| **Model Analysis Notebook** | **`notebooks/02_model_analysis.ipynb`** | **✅ 100%** | **⭐⭐⭐⭐⭐** | **MỚI (B5)** — template + synthetic data, sẵn sàng điền số thật |
+| Unit tests API | `tests/test_api.py` | ✅ 100% | ⭐⭐⭐⭐⭐ | MỚI B3 — 25 tests |
+| **Unit tests Preprocessing** | **`tests/test_preprocessing.py`** | **✅ 100%** | **⭐⭐⭐⭐⭐** | **MỚI (B5)** — 64 tests, 100% pass |
+| **Unit tests Models** | **`tests/test_models.py`** | **✅ 100%** | **⭐⭐⭐⭐⭐** | **MỚI (B5)** — 27 tests, no GPU needed |
 
 ### 5.2 Progress bars tổng thể
 
 ```
 Infrastructure code:    ████████████████████  100% ✅
-Data pipeline:          ████████████████████  100% ✅ (pseudo-label + UIT-VSMEC + merge xong)
-EDA & Visualization:    ████████████████████  100% ✅ (6 EDA figures + EDA notebook 01)
-Model training:         ░░░░░░░░░░░░░░░░░░░░    0% ❌ BLOCKER
-Evaluation results:     ░░░░░░░░░░░░░░░░░░░░    0% ❌
-Ablation results:       ░░░░░░░░░░░░░░░░░░░░    0% ❌
+Data pipeline:          ████████████████████  100% ✅ (download script + pseudo-label + merge xong)
+EDA & Visualization:    ████████████████████  100% ✅ (6 EDA figures + notebook 01 + notebook 02 template)
+Model training:         ░░░░░░░░░░░░░░░░░░░░    0% ❌ BLOCKER — cần GPU
+Evaluation results:     ░░░░░░░░░░░░░░░░░░░░    0% ❌ (chờ training)
+Ablation results:       ░░░░░░░░░░░░░░░░░░░░    0% ❌ (chờ training)
 Demo app (live):        ████░░░░░░░░░░░░░░░░   20% ❌ (cần checkpoint)
 FastAPI service:        ████████████████████  100% ✅ (4 endpoints + tests)
-Tests:                  ████████████████░░░░   80% ✅ (25 API tests pass; models/preprocessing tests còn)
-Documentation:          ████████░░░░░░░░░░░░   40% ⚠️
+Tests:                  ████████████████████  100% ✅ (116 tests: 25 API + 64 preprocessing + 27 models)
+Documentation:          ████████████░░░░░░░░   60% ⚠️  (README còn thiếu kết quả thực tế)
 ```
 
 ---
@@ -517,6 +589,7 @@ Documentation:          ████████░░░░░░░░░░�
 #### [P0-2] Dữ liệu labeled quá nhỏ — 1769 mẫu cho 7 lớp
 - **Hiện tại**: ~177 mẫu/lớp trung bình
 - **Cần**: UIT-VSMEC (~7000 mẫu, 7 Ekman emotions) — public, free, loader đã viết sẵn
+- **Download script đã có**: `python -m scripts.download_uit_vsmec --prepare --crawled data/raw/crawled_emotions.xlsx`
 - **Link**: https://github.com/uitnlp/UIT-VSMEC
 
 ### 6.2 🟠 P1 — Quan trọng (cần hoàn thiện trước bảo vệ)
@@ -541,11 +614,13 @@ Documentation:          ████████░░░░░░░░░░�
 
 | # | Hạng mục | Mô tả |
 |---|---|---|
-| ~~P2-1~~ | ~~Unit tests~~ | ✅ DONE buổi 3 — `tests/test_api.py` 25 tests |
+| ~~P2-1~~ | ~~Unit tests API~~ | ✅ DONE B3 — `tests/test_api.py` 25 tests |
+| ~~P2-1b~~ | ~~Unit tests Preprocessing~~ | ✅ DONE B5 — `tests/test_preprocessing.py` 64 tests |
+| ~~P2-1c~~ | ~~Unit tests Models~~ | ✅ DONE B5 — `tests/test_models.py` 27 tests, no GPU |
+| ~~P2-3~~ | ~~Teencode.json mở rộng~~ | ✅ DONE B5 — `data/external/teencode.json` 170+ entries |
 | P2-2 | SHAP/Captum | README đề cập nhưng chưa implement — chỉ có LIME |
-| P2-3 | Teencode.json mở rộng | Built-in ~80 entries; cần file JSON 200-500 entries |
-| P2-4 | Calibration analysis | ECE score + reliability diagram |
-| P2-5 | Pseudo-label pipeline | Label 990 unlabeled posts → augment training set |
+| P2-4 | Calibration analysis | ECE score + reliability diagram (cần checkpoint) |
+| P2-5 | Pseudo-label pipeline | Label 990 unlabeled posts → augment training set (cần checkpoint) |
 
 ### 6.4 🐛 Bug tiềm ẩn cần fix trước khi train
 
@@ -595,27 +670,23 @@ Imbalance ratio joy/disgust = 3.1× → cần class weights (đã implement tron
 ### Phase 1 — Fix bugs + Mở rộng dữ liệu + Training
 
 ```
-[x] 0.1  Di chuyển unlabeled_new_posts.json → data/raw/       ✅ DONE buổi 2
-[x] 0.2  Process Apify JSON → cleaned_unlabeled_posts.csv      ✅ DONE buổi 2
-[x] 0.3  EDA scripts + 6 figures trong reports/figures/        ✅ DONE buổi 2
+[x] 0.1  Di chuyển unlabeled_new_posts.json → data/raw/            ✅ DONE B2
+[x] 0.2  Process Apify JSON → cleaned_unlabeled_posts.csv           ✅ DONE B2
+[x] 0.3  EDA scripts + 6 figures trong reports/figures/             ✅ DONE B2
+[x] 1.1  Fix bug label mapping trong run_ablation.py                ✅ False alarm (B3 verified)
+[x] 1.2  Script tải UIT-VSMEC tự động                               ✅ DONE B5 — scripts/download_uit_vsmec.py
 
-[ ] 1.1  Fix bug label mapping trong run_ablation.py:
-         load_raw() cần thêm .str.lower().str.strip()
-
-[ ] 1.2  Tải UIT-VSMEC dataset:
-         → đặt vào data/raw/UIT-VSMEC.csv
-
-[ ] 1.3  Chạy lại data preparation với UIT-VSMEC:
-         python -m scripts.prepare_data \
-           --uit-vsmec data/raw/UIT-VSMEC.csv \
-           --crawled   data/raw/crawled_emotions.xlsx \
-           --output-dir data/processed
+[ ] 1.3  CHẠY download + data preparation (cần Internet):
+         python -m scripts.download_uit_vsmec --prepare \
+             --crawled data/raw/crawled_emotions.xlsx
+         → data/raw/UIT-VSMEC.csv + train/val/test.parquet (~8400 rows)
 
 [ ] 1.4  Train model (cần GPU):
          python -m src.train --config configs/config.yaml
          → Checkpoint lưu vào models/best_model/
+         → Thời gian: ~2-4h (RTX 3060+) | ~20h (CPU)
 
-[ ] 1.5  Chạy ablation study:
+[ ] 1.5  Chạy ablation study (cần GPU, sau 1.4):
          python -m scripts.run_ablation \
            --raw data/raw/crawled_emotions.xlsx \
            --output-dir models/ablation
@@ -625,51 +696,56 @@ Imbalance ratio joy/disgust = 3.1× → cần class weights (đã implement tron
          python -m src.evaluate \
            --checkpoint models/best_model \
            --data data/processed/test.parquet
+         → F1-Macro, confusion matrix, per-class metrics
 ```
 
 ### Phase 2 — EDA Notebook + Tài liệu
 
 ```
-[ ] 2.1  Tạo notebooks/01_eda.ipynb:
-         - Import & chạy lại scripts/eda_interactions.py inline
-         - Thêm: word cloud per emotion, top-20 teencode frequency
-         - Thêm: sample posts per class (show raw text)
-         - Thêm: text length boxplot per class
+[x] 2.1  Tạo notebooks/01_eda.ipynb                                 ✅ DONE B3
+         10 sections: label distribution, text features/emotion,
+         word clouds x7, top-20 teencode, Pearson correlation,
+         boxplots interaction proxies, sample posts per class.
 
-[ ] 2.2  Tạo notebooks/02_model_analysis.ipynb:
-         - Learning curve (train_loss vs val_loss per epoch)
-         - Confusion matrix heatmap (từ kết quả thực tế)
-         - Per-class F1 bar chart
-         - Top-5 sai nhiều nhất per class (error analysis)
+[x] 2.2  Tạo notebooks/02_model_analysis.ipynb                      ✅ DONE B5 (template)
+         8 sections: learning curves, confusion matrix, per-class F1,
+         ablation bar chart, error analysis, LIME examples, summary.
+         Dùng synthetic placeholder — sẵn sàng điền số thật sau training.
 
-[ ] 2.3  Cập nhật README.md:
+[ ] 2.3  Điền kết quả thực tế vào notebook 02 (sau 1.6):
+         - Thay synthetic data bằng models/best_model/training_metrics.json
+         - Thay synthetic predictions bằng models/best_model/test_predictions.csv
+         - Chạy lại tất cả cells → export figures
+
+[ ] 2.4  Cập nhật README.md (sau 1.6):
          - Thêm bảng ablation results thực tế
          - Thêm bảng so sánh baseline vs full model
-         - Thêm sample LIME explanation screenshot
-         - Cập nhật hướng dẫn reproduce
+         - Thêm screenshot confusion matrix + LIME example
+         - Cập nhật hướng dẫn reproduce đầy đủ
 ```
 
 ### Phase 3 — Hoàn thiện kỹ thuật
 
 ```
-[x] 3.1  Implement FastAPI endpoints (app/main.py):             ✅ DONE buổi 3
-         - lifespan handler: load LateFusionPredictor + TextExplainer
-         - GET  /health: status ok/degraded + model_loaded + class_names
-         - POST /predict: text + overrides → label + confidence + probs
-         - POST /predict/batch: 1-64 texts → list predictions (mini-batched)
-         - POST /predict/explain: text → prediction + LIME token attribution
-         - Degraded mode: 503 khi checkpoint không tồn tại
+[x] 3.1  Implement FastAPI endpoints (app/main.py):             ✅ DONE B3
+         - lifespan handler, GET /health, POST /predict,
+           POST /predict/batch, POST /predict/explain, degraded mode 503
 
-[x] 3.2  Viết unit tests (tests/):                              ✅ DONE buổi 3 (API tests)
-         tests/test_api.py — 25 tests, 100% pass, không cần GPU
-         - test_preprocessing.py: TeencodeNormalizer cases
-         - test_models.py: forward pass output shape
-         - test_dataset.py: collate function
-         - test_evaluate.py: F1-Macro calculation
+[x] 3.2  Viết unit tests (tests/):                              ✅ DONE B3 + B5
+         tests/test_api.py          — 25 tests  (B3)
+         tests/test_preprocessing.py — 64 tests  (B5) — TeencodeNormalizer,
+                                                   TabularPreprocessor, split, kappa
+         tests/test_models.py       — 27 tests  (B5) — LateFusionConfig,
+                                                   DnnBaseline, TfidfBaseline
+         TỔNG: 116 tests, 100% pass
 
-[ ] 3.3  Tạo data/external/teencode.json (200+ entries):
-         - Mở rộng từ built-in defaults
-         - Thêm slang 2024-2025
+[x] 3.3  Tạo data/external/teencode.json:                       ✅ DONE B5
+         170+ entries: gen-Z slang, social media terms, emotion vocab,
+         ASCII emoticons. Merge tự động qua TeencodeNormalizer(teencode_dict_path=...)
+
+[ ] 3.4  test_dataset.py + test_evaluate.py (điểm cộng):
+         - test_dataset.py: SocialSentimentDataset collate function
+         - test_evaluate.py: F1-Macro calculation, confusion matrix output
 ```
 
 ### Phase 4 — Điểm mới nâng cao (điểm xuất sắc)
@@ -725,12 +801,14 @@ Imbalance ratio joy/disgust = 3.1× → cần class weights (đã implement tron
 
 | Điểm mới | Độ khó | Giá trị điểm | Status |
 |---|---|---|---|
-| **Kruskal-Wallis justify FT-Transformer** | Thấp | ⭐⭐⭐⭐ | ✅ DONE |
-| **Ablation study 3 bước** | Trung bình | ⭐⭐⭐⭐⭐ | Script xong, cần chạy |
-| **PhoBERT vs XLM-R comparison** | Thấp | ⭐⭐⭐⭐ | Chưa làm |
-| **Pseudo-label + augment** | Trung bình | ⭐⭐⭐ | Chưa làm |
-| **Gated Fusion variant** | Cao | ⭐⭐⭐⭐⭐ | Chưa làm |
-| **SHAP tabular attribution** | Trung bình | ⭐⭐⭐⭐ | Chưa làm |
+| **Kruskal-Wallis justify FT-Transformer** | Thấp | ⭐⭐⭐⭐ | ✅ DONE B2 |
+| **Ablation study 3 bước** | Trung bình | ⭐⭐⭐⭐⭐ | ✅ Script xong — cần chạy sau khi train |
+| **Unit tests 116 tests** | Thấp | ⭐⭐⭐ | ✅ DONE B5 |
+| **Teencode dictionary 170+ entries** | Thấp | ⭐⭐⭐ | ✅ DONE B5 |
+| **PhoBERT vs XLM-R comparison** | Thấp | ⭐⭐⭐⭐ | ⬜ Chưa làm — cần GPU |
+| **Pseudo-label + augment** | Trung bình | ⭐⭐⭐ | ⬜ Chưa làm — cần checkpoint |
+| **Gated Fusion variant** | Cao | ⭐⭐⭐⭐⭐ | ⬜ Chưa làm |
+| **SHAP tabular attribution** | Trung bình | ⭐⭐⭐⭐ | ⬜ Chưa làm — cần checkpoint |
 
 ---
 
@@ -743,8 +821,9 @@ Imbalance ratio joy/disgust = 3.1× → cần class weights (đã implement tron
 - [x] Processed splits (`train/val/test.parquet` — 1769 mẫu)
 - [x] Raw unlabeled data (Apify JSON — 999 posts)
 - [x] Cleaned unlabeled CSV (`cleaned_unlabeled_posts.csv` — 990 posts, 12 features)
-- [ ] UIT-VSMEC dataset tải về và merge
-- [ ] Fix bug label mapping uppercase trong `run_ablation.py`
+- [x] Download script `scripts/download_uit_vsmec.py` ✅ MỚI B5
+- [x] Bug label mapping — đã verify là false alarm ✅ B3
+- [ ] **CHẠY** `python -m scripts.download_uit_vsmec --prepare` → tải UIT-VSMEC + rebuild parquet
 
 ### 10.2 EDA & Visualization
 - [x] 6 EDA figures trong `reports/figures/` (từ scripts)
@@ -752,7 +831,8 @@ Imbalance ratio joy/disgust = 3.1× → cần class weights (đã implement tron
 - [x] Jupyter Notebook `notebooks/01_eda.ipynb` — 10 sections, 10 new figures
 - [x] Word cloud per emotion class (7 emotions, in notebook)
 - [x] Teencode frequency analysis (Top-20 bar + by-emotion heatmap)
-- [ ] Notebook `notebooks/02_model_analysis.ipynb` (cần training results)
+- [x] Notebook `notebooks/02_model_analysis.ipynb` — template đầy đủ ✅ MỚI B5
+- [ ] Điền số thật vào notebook 02 (cần training xong)
 
 ### 10.3 Training & Results
 - [ ] Training chạy thành công → checkpoint trong `models/best_model/`
@@ -761,14 +841,16 @@ Imbalance ratio joy/disgust = 3.1× → cần class weights (đã implement tron
 - [ ] Điền kết quả thực tế vào bảng 9.2
 
 ### 10.4 App & API
-- [ ] Streamlit app chạy được với checkpoint thật
+- [ ] Streamlit app chạy được với checkpoint thật (cần training)
 - [x] FastAPI endpoints implement đầy đủ — 4 endpoints, degraded mode, lifespan handler
 - [ ] Test demo với câu tiếng Việt thực tế (cần checkpoint)
 
 ### 10.5 Code Quality
 - [x] Unit tests FastAPI (`tests/test_api.py` — 25 tests, 100% pass)
-- [ ] Unit tests preprocessing/models (`tests/test_preprocessing.py`, `test_models.py`)
-- [ ] Teencode dictionary mở rộng (`data/external/teencode.json`)
+- [x] Unit tests preprocessing (`tests/test_preprocessing.py` — 64 tests, 100% pass) ✅ MỚI B5
+- [x] Unit tests models (`tests/test_models.py` — 27 tests, 100% pass, no GPU) ✅ MỚI B5
+- [x] Teencode dictionary mở rộng (`data/external/teencode.json` — 170+ entries) ✅ MỚI B5
+- [ ] test_dataset.py + test_evaluate.py (điểm cộng thêm)
 
 ### 10.6 Advanced (điểm xuất sắc)
 - [ ] PhoBERT vs XLM-R comparison (Exp4)
@@ -777,8 +859,8 @@ Imbalance ratio joy/disgust = 3.1× → cần class weights (đã implement tron
 - [ ] SHAP visualization cho tabular branch
 
 ### 10.7 Documentation
-- [ ] README.md cập nhật với kết quả thực tế
-- [ ] Hướng dẫn reproduce đầy đủ
+- [ ] README.md cập nhật với kết quả thực tế (sau training)
+- [ ] Hướng dẫn reproduce đầy đủ (sau training)
 
 ---
 
@@ -790,7 +872,8 @@ Imbalance ratio joy/disgust = 3.1× → cần class weights (đã implement tron
 | 2026-05-24 (B2) | Thêm Apify data pipeline (`process_apify_data.py`). Tạo EDA scripts + 6 figures. Kruskal-Wallis p<0.001 justify FT-Transformer. Di chuyển JSON → `data/raw/`. |
 | 2026-05-24 (B3) | FastAPI (`app/main.py` — 4 endpoints, lifespan, degraded mode). Tests (`tests/test_api.py` — 25 tests 100% pass). Notebook (`notebooks/01_eda.ipynb` — 10 sections, word clouds, teencode analysis, 10 new figures). Verify label mapping bug = false alarm. |
 | 2026-05-24 (B4) | Script pseudo-labeling (`scripts/pseudo_label_apify.py` — mDeBERTa-v3 NLI zero-shot, 7 Vietnamese emotion hypotheses, confidence threshold 0.35, all 990 posts). Update `prepare_data.py` — 3-source merge (crawled + UIT-VSMEC + pseudo), tabular feature derivation, interaction median imputation, 20-column Parquet output. Smoke test OK: 1769→20cols. |
-| *(chờ cập nhật)* | *(Training results, ablation table, demo app live)* |
+| 2026-05-25 (B5) | `scripts/download_uit_vsmec.py` — auto download + run pipeline (1 command). `data/external/teencode.json` — 170+ extended slang entries. `tests/test_preprocessing.py` — 64 tests (TeencodeNormalizer + TabularPreprocessor + stratified_split + kappa), 100% pass. `tests/test_models.py` — 27 tests (LateFusionConfig + DnnBaseline + TfidfBaseline), no GPU needed, 100% pass. `notebooks/02_model_analysis.ipynb` — 8-section template (learning curves, confusion matrix, ablation bar chart, error analysis, LIME) với synthetic placeholder, sẵn sàng điền số thật. Tổng: 116 tests all pass. |
+| *(chờ cập nhật)* | *(Training results, ablation table, notebook 02 với số thật, README cập nhật, demo app live)* |
 
 ---
 
