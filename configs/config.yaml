@@ -13,14 +13,21 @@ data:
   # 7-way Ekman emotions + Neutral (matches the crawled dataset).
   class_names: ["joy", "sadness", "anger", "fear", "disgust", "surprise", "neutral"]
   numerical_cols:
-    - "post_count"
-    - "comment_count"
-    - "avg_likes"
-    - "session_duration"
+    - "text_length"
+    - "n_words"
+    - "n_exclamation"
+    - "n_question"
+    - "n_emoji_token"
+    - "n_hashtag"
+    - "n_latin_words"
+    - "likes"
+    - "comments"
+    - "shares"
   categorical_cols:
-    - "device"
-    - "account_type"
-    - "region"
+    - "has_emoji"
+    - "has_codeswitch"
+    - "has_hashtag"
+    - "is_crawled"
   test_size: 0.15
   val_size:  0.15
 
