@@ -608,6 +608,13 @@ def main() -> None:
     logger.info("Best metrics: %s", hist["best_metrics"])
     logger.info("Best checkpoint: %s", hist["checkpoint"])
 
+    # Save training history so notebooks can plot learning curves.
+    import json as _json
+    metrics_path = Path(hist["checkpoint"]) / "training_metrics.json"
+    with open(metrics_path, "w", encoding="utf-8") as fh:
+        _json.dump(hist["history"], fh, ensure_ascii=False, indent=2)
+    logger.info("Training metrics saved → %s", metrics_path)
+
 
 if __name__ == "__main__":
     main()

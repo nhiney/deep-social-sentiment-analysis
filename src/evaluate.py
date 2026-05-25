@@ -373,12 +373,24 @@ def main() -> None:
     )
 
     # ---- Evaluate & print ----
-    report = evaluate(model, loader, device, class_names=args.class_names)
+    id_to_label = {i: name for i, name in enumerate(args.class_names)}
+    y_true_arr, y_pred_arr, _ = predict(model, loader, device, return_probs=False)
+
+    macro    = compute_classification_metrics(y_true_arr, y_pred_arr, average="macro")
+    weighted = compute_classification_metrics(y_true_arr, y_pred_arr, average="weighted")
+    overall  = {**macro,
+                "f1_weighted":        weighted["f1_weighted"],
+                "precision_weighted": weighted["precision_weighted"],
+                "recall_weighted":    weighted["recall_weighted"]}
+    per_class_d = per_class_metrics(y_true_arr, y_pred_arr, args.class_names)
+    report_str  = classification_report_str(y_true_arr, y_pred_arr, args.class_names)
+    cm          = confusion_matrix_array(y_true_arr, y_pred_arr, n_classes=len(args.class_names))
+
     logger.info("Overall metrics:")
-    for k, v in report["overall"].items():
+    for k, v in overall.items():
         logger.info("  %-20s %.4f", k, v)
-    logger.info("\nClassification report:\n%s", report["report"])
-    logger.info("\nConfusion matrix:\n%s", report["confusion_matrix"])
+    logger.info("\nClassification report:\n%s", report_str)
+    logger.info("\nConfusion matrix:\n%s", cm)
 
     # ---- Save outputs ----
     if args.output_dir:
@@ -386,15 +398,25 @@ def main() -> None:
         out_dir = Path(args.output_dir)
         out_dir.mkdir(parents=True, exist_ok=True)
 
-        metrics_payload = {**report["overall"]}
-        if "per_class" in report:
-            metrics_payload["per_class"] = report["per_class"]
+        metrics_payload = {**overall, "per_class": per_class_d}
         with (out_dir / "metrics.json").open("w", encoding="utf-8") as fh:
             _json.dump(metrics_payload, fh, ensure_ascii=False, indent=2)
         logger.info("Saved metrics.json → %s", out_dir / "metrics.json")
 
-        np.save(str(out_dir / "confusion_matrix.npy"), report["confusion_matrix"])
+        np.save(str(out_dir / "confusion_matrix.npy"), cm)
         logger.info("Saved confusion_matrix.npy → %s", out_dir / "confusion_matrix.npy")
+
+        # test_predictions.csv — needed by notebooks/02_model_analysis.ipynb
+        texts = df[args.text_column].astype(str).tolist()
+        preds_df = pd.DataFrame({
+            "text":       texts[:len(y_true_arr)],
+            "true_label": [id_to_label[i] for i in y_true_arr],
+            "pred_label": [id_to_label[i] for i in y_pred_arr],
+        })
+        ckpt_dir = Path(args.checkpoint)
+        preds_path = ckpt_dir / "test_predictions.csv"
+        preds_df.to_csv(preds_path, index=False)
+        logger.info("Saved test_predictions.csv → %s", preds_path)
 
 
 if __name__ == "__main__":
