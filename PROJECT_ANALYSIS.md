@@ -1,6 +1,6 @@
 # Phân tích toàn diện đồ án: Deep Social Sentiment Analysis
 > Tài liệu nội bộ — tổng hợp hiện trạng, lộ trình hoàn thiện và chiến lược đạt điểm xuất sắc  
-> Cập nhật lần cuối: **2026-05-25 (buổi 6)**
+> Cập nhật lần cuối: **2026-05-26 (buổi 7)**
 
 ---
 
@@ -581,6 +581,65 @@ Per-class F1: joy=0.7893 | sadness=0.7431 | surprise=0.8243 | fear=0.7205 | neut
 
 ---
 
+### 📅 Buổi 7 — 2026-05-26 (Deploy model local + Fix inference + Notebook chạy số thật)
+
+**Đã làm:**
+
+#### ✅ 1. Tải toàn bộ artifacts từ Google Drive về local
+
+Copy 29 files từ `colab_sentiment/` vào đúng thư mục project, verify size từng file:
+
+| Đích | Files | Ghi chú |
+|---|---|---|
+| `models/best_model/` | `pytorch_model.bin` (1.1GB), `config.json`, `tab_preprocessor.joblib`, `training_metrics.json`, `test_predictions.csv` | Checkpoint chính |
+| `models/ablation/exp1,2,3/best_model/` | `pytorch_model.bin` (1GB × 3), `config.json`, `tab_preprocessor.joblib` | 3 ablation experiments |
+| `data/raw/` | `UIT-VSMEC.csv` (571K) | Đã có locally |
+| `data/processed/` | `train/val/test.parquet` (updated), `pseudo_labeled_apify.csv`, `cleaned_unlabeled_posts.csv` | 6731/1443/1442 rows |
+| `reports/` | `metrics.json`, `ablation_results.csv/md`, `confusion_matrix.npy`, `evaluate_output.txt` | Committed to git |
+| `reports/figures/` | `confusion_matrix.png`, `learning_curves.png`, `per_class_metrics.png` | 3 hình từ Colab |
+
+Sau khi verify đầy đủ: xóa `colab_sentiment/` giải phóng **5.8GB**.
+
+#### ✅ 2. Fix 4 bugs trong inference + notebook
+
+| Bug | File | Fix |
+|---|---|---|
+| `make_text_derived_features` dùng `n_exclam` (sai) | `app/inference.py` | Đổi → `n_exclamation`; thêm `n_hashtag`, `likes/comments/shares=NaN`, `is_crawled="0"` |
+| `DEFAULT_NUM_COLS` / `DEFAULT_CAT_COLS` thiếu cột | `app/inference.py` | Sync với `TabularPreprocessor` đã fit (10 num + 4 cat) |
+| Cell 12 notebook dùng `precision_macro` sai | `notebooks/02_model_analysis.ipynb` | Đổi → `precision` / `recall` (sklearn per-class keys) |
+| Cell 20 `LateFusionPredictor` + `TextExplainer` API sai | `notebooks/02_model_analysis.ipynb` | Thêm `class_names=CLASS_NAMES`; dùng đúng `predict_proba_fn=` |
+
+#### ✅ 3. Notebook 02 chạy thành công với số thật
+
+`notebooks/02_model_analysis.ipynb` — tất cả 8 sections executed, 5 figures mới:
+
+| Figure | Nội dung |
+|---|---|
+| `learning_curves.png` | Train/val loss + F1-Macro theo 7 epochs |
+| `confusion_matrix.png` | Counts + normalized side-by-side (1443 test samples) |
+| `per_class_metrics.png` | Precision/Recall/F1 7 classes, color-coded |
+| `ablation_results.png` | Grouped bar chart 3 experiments + delta annotations |
+| `error_analysis.png` | Top-10 confusion pairs histogram + sample texts |
+
+LIME section chạy với real checkpoint — predictor load thành công trên CPU.
+
+#### ✅ 4. Fix 2 bugs lifespan + test
+
+| Bug | File | Fix |
+|---|---|---|
+| `_lifespan` không reset `_predictor=None` khi load fail | `app/main.py` | Thêm `_predictor = None` trong `except` block |
+| `TestDegradedMode` bị ảnh hưởng bởi module-scoped `client` | `tests/test_api.py` | Dùng `monkeypatch.setenv("MODEL_CHECKPOINT", "/nonexistent/...")` |
+
+**Kết quả: 116/116 tests pass** (tăng lên 116 — 3 degraded tests hoạt động đúng).
+
+#### ✅ 5. Dọn dẹp project
+
+Xóa tất cả auto-generated folders: `__pycache__/` × 4, `.pytest_cache/`, `notebooks/.ipynb_checkpoints/`.
+
+**Tổng kết buổi 7:** Model đã deploy local. Notebook 02 chạy số thật. Inference API hoạt động đúng với preprocessor đã fit. 116/116 tests. Còn lại: test Streamlit live, test_dataset/test_evaluate, PhoBERT comparison (cần GPU).
+
+---
+
 ## 5. Hiện trạng tổng thể
 
 ### 5.1 Bảng đánh giá module
@@ -604,21 +663,23 @@ Per-class F1: joy=0.7893 | sadness=0.7431 | surprise=0.8243 | fear=0.7205 | neut
 | Apify JSON cleaner | `scripts/process_apify_data.py` | ✅ 100% | ⭐⭐⭐⭐⭐ | MỚI B2 |
 | EDA & Interaction analysis | `scripts/eda_interactions.py` | ✅ 100% | ⭐⭐⭐⭐⭐ | MỚI B2, 6 figures |
 | **UIT-VSMEC downloader** | **`scripts/download_uit_vsmec.py`** | **✅ 100%** | **⭐⭐⭐⭐⭐** | **MỚI (B5)** — auto download + run pipeline |
-| Streamlit app | `app/app.py` | ✅ 95% | ⭐⭐⭐⭐⭐ | cần checkpoint để chạy |
-| LIME explainer | `app/explainer.py` | ✅ 100% | ⭐⭐⭐⭐ | |
-| FastAPI service | `app/main.py` | ✅ 100% | ⭐⭐⭐⭐⭐ | MỚI B3 — 4 endpoints + lifespan |
+| Streamlit app | `app/app.py` | ✅ 95% | ⭐⭐⭐⭐⭐ | Checkpoint có local — chưa test live |
+| LIME explainer | `app/explainer.py` | ✅ 100% | ⭐⭐⭐⭐⭐ | Chạy được với real checkpoint (B7) |
+| FastAPI service | `app/main.py` | ✅ 100% | ⭐⭐⭐⭐⭐ | MỚI B3 — B7 fix lifespan degraded mode |
+| Inference façade | `app/inference.py` | ✅ 100% | ⭐⭐⭐⭐⭐ | **MỚI (B7)** — fix column names sync với TabularPreprocessor |
 | Raw data (labeled) | `data/raw/crawled_emotions.xlsx` | ✅ | ⭐⭐⭐ | 2034 mẫu |
 | Raw data (unlabeled) | `data/raw/unlabeled_new_posts.json` | ✅ | ⭐⭐⭐⭐ | 999 Facebook posts |
-| Processed data (labeled) | `data/processed/*.parquet` | ✅ | ⭐⭐⭐ | 1769 mẫu — tăng sau khi tải UIT-VSMEC |
+| Processed data | `data/processed/*.parquet` | ✅ | ⭐⭐⭐⭐⭐ | **MỚI (B7)** — 6731/1443/1442 rows (UIT-VSMEC merged) |
 | Processed data (unlabeled) | `data/processed/cleaned_unlabeled_posts.csv` | ✅ | ⭐⭐⭐⭐ | 990 posts, 12 features |
-| EDA Figures | `reports/figures/` | ✅ | ⭐⭐⭐⭐⭐ | 6+ publication-quality figures |
+| EDA Figures | `reports/figures/` | ✅ | ⭐⭐⭐⭐⭐ | 11 figures (6 EDA + 5 model analysis) |
 | **Teencode dictionary** | **`data/external/teencode.json`** | **✅ 100%** | **⭐⭐⭐⭐⭐** | **MỚI (B5)** — 170+ entries gen-Z + social |
-| Model checkpoint | `models/best_model/` | ✅ 100% | ⭐⭐⭐⭐⭐ | **MỚI (B6)** — val F1=0.6562, trên Drive |
+| Model checkpoint | `models/best_model/` | ✅ 100% | ⭐⭐⭐⭐⭐ | **MỚI (B7)** — deploy local, val F1=0.6562 |
+| Ablation checkpoints | `models/ablation/exp1,2,3/` | ✅ 100% | ⭐⭐⭐⭐⭐ | **MỚI (B7)** — 3 × 1GB deploy local |
 | Ablation results | `reports/ablation_results.csv` | ✅ 100% | ⭐⭐⭐⭐⭐ | **MỚI (B6)** — 3 experiments |
 | Test metrics | `reports/metrics.json` | ✅ 100% | ⭐⭐⭐⭐⭐ | **MỚI (B6)** — F1-Macro=0.6877 |
 | EDA Notebook | `notebooks/01_eda.ipynb` | ✅ 100% | ⭐⭐⭐⭐⭐ | MỚI B3 — 10 sections, 10 figures |
-| **Model Analysis Notebook** | **`notebooks/02_model_analysis.ipynb`** | **✅ 100%** | **⭐⭐⭐⭐⭐** | **MỚI (B5)** — template + synthetic data, sẵn sàng điền số thật |
-| Unit tests API | `tests/test_api.py` | ✅ 100% | ⭐⭐⭐⭐⭐ | MỚI B3 — 25 tests |
+| **Model Analysis Notebook** | **`notebooks/02_model_analysis.ipynb`** | **✅ 100%** | **⭐⭐⭐⭐⭐** | **MỚI (B7)** — executed với số thật, 5 figures inline |
+| Unit tests API | `tests/test_api.py` | ✅ 100% | ⭐⭐⭐⭐⭐ | MỚI B3 — B7 fix degraded mode test |
 | **Unit tests Preprocessing** | **`tests/test_preprocessing.py`** | **✅ 100%** | **⭐⭐⭐⭐⭐** | **MỚI (B5)** — 64 tests, 100% pass |
 | **Unit tests Models** | **`tests/test_models.py`** | **✅ 100%** | **⭐⭐⭐⭐⭐** | **MỚI (B5)** — 27 tests, no GPU needed |
 
@@ -627,12 +688,13 @@ Per-class F1: joy=0.7893 | sadness=0.7431 | surprise=0.8243 | fear=0.7205 | neut
 ```
 Infrastructure code:    ████████████████████  100% ✅
 Data pipeline:          ████████████████████  100% ✅ (download script + pseudo-label + merge xong)
-EDA & Visualization:    ████████████████████  100% ✅ (6 EDA figures + notebook 01 + notebook 02 template)
+EDA & Visualization:    ████████████████████  100% ✅ (11 figures + notebook 01 + notebook 02 số thật B7)
 Model training:         ████████████████████  100% ✅ val F1-Macro=0.6562 (B6)
 Evaluation results:     ████████████████████  100% ✅ test F1-Macro=0.6877 (B6)
 Ablation results:       ████████████████████  100% ✅ 3 experiments hoàn tất (B6)
-Demo app (live):        ████░░░░░░░░░░░░░░░░   20% ⚠️  (cần tải checkpoint từ Drive)
-FastAPI service:        ████████████████████  100% ✅ (4 endpoints + tests)
+Demo app (live):        ████████████████░░░░   80% ⚠️  checkpoint local rồi — chưa test Streamlit live (B7)
+FastAPI service:        ████████████████████  100% ✅ (4 endpoints + lifespan fix B7)
+Inference API:          ████████████████████  100% ✅ column names synced B7
 Tests:                  ████████████████████  100% ✅ (116 tests: 25 API + 64 preprocessing + 27 models)
 Documentation:          ████████████████████  100% ✅ README cập nhật số thật (B6)
 ```
@@ -674,9 +736,11 @@ Documentation:          ██████████████████�
 | ~~P2-1b~~ | ~~Unit tests Preprocessing~~ | ✅ DONE B5 — `tests/test_preprocessing.py` 64 tests |
 | ~~P2-1c~~ | ~~Unit tests Models~~ | ✅ DONE B5 — `tests/test_models.py` 27 tests, no GPU |
 | ~~P2-3~~ | ~~Teencode.json mở rộng~~ | ✅ DONE B5 — `data/external/teencode.json` 170+ entries |
-| P2-2 | SHAP/Captum | README đề cập nhưng chưa implement — chỉ có LIME |
-| P2-4 | Calibration analysis | ECE score + reliability diagram (cần checkpoint) |
-| P2-5 | Pseudo-label pipeline | Label 990 unlabeled posts → augment training set (cần checkpoint) |
+| P2-2 | SHAP/Captum | README đề cập nhưng chưa implement — chỉ có LIME. Checkpoint đã có local. |
+| P2-4 | Calibration analysis | ECE score + reliability diagram. Checkpoint đã có local. |
+| P2-5 | Pseudo-label pipeline | Label 990 unlabeled posts bằng model đã train. Checkpoint đã có local. |
+| P2-6 | test_dataset.py + test_evaluate.py | Thêm 2 test files, không cần GPU |
+| P2-7 | PhoBERT vs XLM-R (Exp4) | Cần Colab GPU (~10 phút) |
 
 ### 6.4 🐛 Bug tiềm ẩn cần fix trước khi train
 
@@ -758,9 +822,10 @@ Imbalance ratio joy/disgust = 3.1× → cần class weights (đã implement tron
          ablation bar chart, error analysis, LIME examples, summary.
          Dùng synthetic placeholder — sẵn sàng điền số thật sau training.
 
-[ ] 2.3  Điền kết quả thực tế vào notebook 02:
-         - Tải metrics.json + confusion_matrix.npy từ Drive về reports/
-         - Chạy lại tất cả cells → export figures (learning curves, confusion matrix, ablation)
+[x] 2.3  Điền kết quả thực tế vào notebook 02:                      ✅ DONE B7
+         - Tải metrics.json + test_predictions.csv + ablation_results.csv từ Drive
+         - Fix 4 bugs (column names, API calls)
+         - Chạy thành công → 5 figures mới trong reports/figures/
 
 [x] 2.4  Cập nhật README.md                                        ✅ DONE B6
          - Bảng test metrics, per-class F1, ablation table, reproduce guide
@@ -833,24 +898,26 @@ Imbalance ratio joy/disgust = 3.1× → cần class weights (đã implement tron
 |---|---|---|---|---|
 | TF-IDF + LogReg | ~0.42 | ~0.44 | ~0.41 | ~0.48 |
 | DNN bag-of-words | ~0.45 | ~0.46 | ~0.44 | ~0.51 |
-| XLM-R only (Exp1) | ~0.62 | ~0.63 | ~0.61 | ~0.68 |
-| XLM-R + Teencode (Exp2) | ~0.66 | ~0.67 | ~0.65 | ~0.71 |
-| **Full Fusion (Exp3)** | **~0.70** | **~0.71** | **~0.69** | **~0.74** |
+| XLM-R only (Exp1) | **0.6235** | 0.6072 | 0.6626 | 0.6424 |
+| XLM-R + Teencode (Exp2) | **0.6548** | 0.6402 | 0.6869 | 0.6647 |
+| Full Fusion (Exp3) | 0.6454 | 0.6304 | 0.6739 | 0.6587 |
+| **Best model (Full train, test set)** | **0.6877** | **0.6976** | **0.6874** | **0.7020** |
 
-> ⚠️ Ước tính — kết quả thực tế sẽ cập nhật vào đây sau khi training hoàn thành.
+> ✅ Kết quả thực tế từ Colab T4 GPU (B6). Baseline TF-IDF/DNN là ước tính chưa chạy.
 
 ### 9.3 Điểm mới có thể nâng cấp
 
 | Điểm mới | Độ khó | Giá trị điểm | Status |
 |---|---|---|---|
 | **Kruskal-Wallis justify FT-Transformer** | Thấp | ⭐⭐⭐⭐ | ✅ DONE B2 |
-| **Ablation study 3 bước** | Trung bình | ⭐⭐⭐⭐⭐ | ✅ Script xong — cần chạy sau khi train |
-| **Unit tests 116 tests** | Thấp | ⭐⭐⭐ | ✅ DONE B5 |
+| **Ablation study 3 bước** | Trung bình | ⭐⭐⭐⭐⭐ | ✅ DONE B6 — exp1=0.6235 → exp2=0.6548 → exp3=0.6454 |
+| **Unit tests 116 tests** | Thấp | ⭐⭐⭐ | ✅ DONE B5+B7 — 116/116 pass |
 | **Teencode dictionary 170+ entries** | Thấp | ⭐⭐⭐ | ✅ DONE B5 |
-| **PhoBERT vs XLM-R comparison** | Thấp | ⭐⭐⭐⭐ | ⬜ Chưa làm — cần GPU |
-| **Pseudo-label + augment** | Trung bình | ⭐⭐⭐ | ⬜ Chưa làm — cần checkpoint |
-| **Gated Fusion variant** | Cao | ⭐⭐⭐⭐⭐ | ⬜ Chưa làm |
-| **SHAP tabular attribution** | Trung bình | ⭐⭐⭐⭐ | ⬜ Chưa làm — cần checkpoint |
+| **Notebook 02 số thật + 5 figures** | Thấp | ⭐⭐⭐ | ✅ DONE B7 |
+| **PhoBERT vs XLM-R comparison** | Thấp | ⭐⭐⭐⭐ | ⬜ Chưa làm — cần Colab GPU |
+| **Pseudo-label + augment** | Trung bình | ⭐⭐⭐ | ⬜ Cần Colab GPU (checkpoint đã có local) |
+| **SHAP tabular attribution** | Trung bình | ⭐⭐⭐⭐ | ⬜ Cần Colab (checkpoint đã có local) |
+| **Gated Fusion variant** | Cao | ⭐⭐⭐⭐⭐ | ⬜ Chưa làm — implement + train |
 
 ---
 
@@ -860,12 +927,12 @@ Imbalance ratio joy/disgust = 3.1× → cần class weights (đã implement tron
 
 ### 10.1 Data & Processing
 - [x] Raw labeled data (`crawled_emotions.xlsx` — 2034 mẫu)
-- [x] Processed splits (`train/val/test.parquet` — 1769 mẫu)
+- [x] Processed splits (`train/val/test.parquet`) ✅ B7 — 6731/1443/1442 rows (UIT-VSMEC merged)
 - [x] Raw unlabeled data (Apify JSON — 999 posts)
 - [x] Cleaned unlabeled CSV (`cleaned_unlabeled_posts.csv` — 990 posts, 12 features)
-- [x] Download script `scripts/download_uit_vsmec.py` ✅ MỚI B5
-- [x] Bug label mapping — đã verify là false alarm ✅ B3
-- [ ] **CHẠY** `python -m scripts.download_uit_vsmec --prepare` → tải UIT-VSMEC + rebuild parquet
+- [x] `data/raw/UIT-VSMEC.csv` ✅ B7 — deploy local
+- [x] `data/processed/pseudo_labeled_apify.csv` ✅ B7 — 655 pseudo-labeled posts
+- [x] Download script `scripts/download_uit_vsmec.py` ✅ B5
 
 ### 10.2 EDA & Visualization
 - [x] 6 EDA figures trong `reports/figures/` (từ scripts)
@@ -873,36 +940,38 @@ Imbalance ratio joy/disgust = 3.1× → cần class weights (đã implement tron
 - [x] Jupyter Notebook `notebooks/01_eda.ipynb` — 10 sections, 10 new figures
 - [x] Word cloud per emotion class (7 emotions, in notebook)
 - [x] Teencode frequency analysis (Top-20 bar + by-emotion heatmap)
-- [x] Notebook `notebooks/02_model_analysis.ipynb` — template đầy đủ ✅ MỚI B5
-- [ ] Điền số thật vào notebook 02 (cần training xong)
+- [x] Notebook `notebooks/02_model_analysis.ipynb` — **executed với số thật** ✅ B7
+- [x] 5 figures model analysis: learning curves, confusion matrix, per-class F1, ablation, error analysis ✅ B7
 
 ### 10.3 Training & Results
-- [ ] Training chạy thành công → checkpoint trong `models/best_model/`
-- [ ] Ablation study chạy → `reports/ablation_results.csv`
-- [ ] Evaluate trên test set → F1-Macro, confusion matrix
-- [ ] Điền kết quả thực tế vào bảng 9.2
+- [x] Training chạy thành công → checkpoint `models/best_model/` ✅ B6 (Colab) + B7 (deploy local)
+- [x] Ablation study chạy → `reports/ablation_results.csv` ✅ B6
+- [x] Evaluate trên test set → F1-Macro=0.6877, confusion matrix ✅ B6
+- [x] Kết quả thực tế điền vào bảng 9.2 ✅ B7
 
 ### 10.4 App & API
-- [ ] Streamlit app chạy được với checkpoint thật (cần training)
-- [x] FastAPI endpoints implement đầy đủ — 4 endpoints, degraded mode, lifespan handler
-- [ ] Test demo với câu tiếng Việt thực tế (cần checkpoint)
+- [ ] **Streamlit app test live** — checkpoint đã có local, cần chạy `streamlit run app/app.py`
+- [x] FastAPI endpoints implement đầy đủ — 4 endpoints, degraded mode ✅ B3+B7
+- [x] Inference API column names synced với TabularPreprocessor ✅ B7
+- [ ] Demo demo LIME live với câu tiếng Việt thực tế trên Streamlit
 
 ### 10.5 Code Quality
-- [x] Unit tests FastAPI (`tests/test_api.py` — 25 tests, 100% pass)
-- [x] Unit tests preprocessing (`tests/test_preprocessing.py` — 64 tests, 100% pass) ✅ MỚI B5
-- [x] Unit tests models (`tests/test_models.py` — 27 tests, 100% pass, no GPU) ✅ MỚI B5
-- [x] Teencode dictionary mở rộng (`data/external/teencode.json` — 170+ entries) ✅ MỚI B5
-- [ ] test_dataset.py + test_evaluate.py (điểm cộng thêm)
+- [x] Unit tests FastAPI (`tests/test_api.py` — 25 tests, 100% pass) ✅ B7 fix degraded mode
+- [x] Unit tests preprocessing (`tests/test_preprocessing.py` — 64 tests, 100% pass) ✅ B5
+- [x] Unit tests models (`tests/test_models.py` — 27 tests, 100% pass, no GPU) ✅ B5
+- [x] Teencode dictionary mở rộng (`data/external/teencode.json` — 170+ entries) ✅ B5
+- [ ] `tests/test_dataset.py` — SocialSentimentDataset + collate_fn (không cần GPU)
+- [ ] `tests/test_evaluate.py` — F1-Macro calculation, confusion matrix output (không cần GPU)
 
 ### 10.6 Advanced (điểm xuất sắc)
-- [ ] PhoBERT vs XLM-R comparison (Exp4)
-- [ ] Pseudo-label pipeline cho 990 unlabeled posts
-- [ ] Gated Fusion variant
-- [ ] SHAP visualization cho tabular branch
+- [ ] **PhoBERT vs XLM-R** comparison (Exp4) — cần Colab GPU ~10 phút
+- [ ] **SHAP** visualization cho tabular branch — cần Colab (checkpoint local sẵn)
+- [ ] Pseudo-label 990 unlabeled posts bằng model đã train — cần Colab
+- [ ] Gated Fusion variant — implement + train
 
 ### 10.7 Documentation
-- [ ] README.md cập nhật với kết quả thực tế (sau training)
-- [ ] Hướng dẫn reproduce đầy đủ (sau training)
+- [x] README.md cập nhật với kết quả thực tế ✅ B6
+- [x] Hướng dẫn reproduce đầy đủ ✅ B6
 
 ---
 
@@ -915,7 +984,7 @@ Imbalance ratio joy/disgust = 3.1× → cần class weights (đã implement tron
 | 2026-05-24 (B3) | FastAPI (`app/main.py` — 4 endpoints, lifespan, degraded mode). Tests (`tests/test_api.py` — 25 tests 100% pass). Notebook (`notebooks/01_eda.ipynb` — 10 sections, word clouds, teencode analysis, 10 new figures). Verify label mapping bug = false alarm. |
 | 2026-05-24 (B4) | Script pseudo-labeling (`scripts/pseudo_label_apify.py` — mDeBERTa-v3 NLI zero-shot, 7 Vietnamese emotion hypotheses, confidence threshold 0.35, all 990 posts). Update `prepare_data.py` — 3-source merge (crawled + UIT-VSMEC + pseudo), tabular feature derivation, interaction median imputation, 20-column Parquet output. Smoke test OK: 1769→20cols. |
 | 2026-05-25 (B5) | `scripts/download_uit_vsmec.py` — auto download + run pipeline (1 command). `data/external/teencode.json` — 170+ extended slang entries. `tests/test_preprocessing.py` — 64 tests (TeencodeNormalizer + TabularPreprocessor + stratified_split + kappa), 100% pass. `tests/test_models.py` — 27 tests (LateFusionConfig + DnnBaseline + TfidfBaseline), no GPU needed, 100% pass. `notebooks/02_model_analysis.ipynb` — 8-section template (learning curves, confusion matrix, ablation bar chart, error analysis, LIME) với synthetic placeholder, sẵn sàng điền số thật. Tổng: 116 tests all pass. |
-| *(chờ cập nhật)* | *(Training results, ablation table, notebook 02 với số thật, README cập nhật, demo app live)* |
+| 2026-05-26 (B7) | Deploy model local từ Drive (5.8GB, 29 files). Fix inference.py column names (n_exclam→n_exclamation, thêm n_hashtag/likes/comments/shares/is_crawled). Fix notebook 02 API calls. Chạy notebook 02 thành công với số thật → 5 figures. Fix lifespan degraded mode bug (app/main.py). Fix TestDegradedMode fixture. 116/116 tests. Xóa colab_sentiment/ + cache folders. |
 
 ---
 
