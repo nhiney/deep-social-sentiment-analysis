@@ -250,16 +250,14 @@ class TestPredictExplain:
 # ---------------------------------------------------------------------------
 class TestDegradedMode:
     @pytest.fixture
-    def degraded_client(self):
+    def degraded_client(self, monkeypatch):
         import app.main as main_module
 
-        saved_pred, saved_expl = main_module._predictor, main_module._explainer
-        main_module._predictor = None
-        main_module._explainer = None
+        # Point to a non-existent checkpoint so the lifespan handler fails and
+        # leaves _predictor = None regardless of whether a real checkpoint exists.
+        monkeypatch.setenv("MODEL_CHECKPOINT", "/nonexistent/path/for/testing")
         with TestClient(main_module.app) as c:
             yield c
-        main_module._predictor = saved_pred
-        main_module._explainer = saved_expl
 
     def test_health_degraded(self, degraded_client):
         data = degraded_client.get("/health").json()

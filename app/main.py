@@ -151,6 +151,8 @@ async def _lifespan(application: FastAPI):
             "Server is running in degraded mode — inference endpoints will return 503.",
             exc,
         )
+        _predictor = None
+        _explainer = None
 
     yield  # application runs here
 
