@@ -61,6 +61,9 @@ data/external/*
 !data/external/.gitkeep
 !data/external/teencode.json
 
+# Downloaded Colab/Drive exports (large binary files)
+colab_sentiment/
+
 # Model checkpoints, weights, logs
 models/*
 !models/.gitkeep
