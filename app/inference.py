@@ -37,27 +37,39 @@ _RE_HASHTAG = re.compile(r"#\w+")
 
 
 def make_text_derived_features(text_series: pd.Series) -> pd.DataFrame:
-    """Re-export of the training-time feature extractor (kept in-sync)."""
+    """Re-export of the training-time feature extractor (kept in-sync).
+
+    Column names must exactly match what TabularPreprocessor was fitted on
+    during training (see scripts/prepare_data.py).
+    """
     s = text_series.astype(str)
     out = pd.DataFrame(index=s.index)
-    out["text_length"]   = s.str.len().astype(np.float32)
-    out["n_words"]       = s.str.split().apply(len).astype(np.float32)
-    out["n_exclam"]      = s.str.count("!").astype(np.float32)
-    out["n_question"]    = s.str.count(r"\?").astype(np.float32)
-    out["n_emoji_token"] = s.apply(lambda t: len(_RE_EMOJI_TOKEN.findall(t))).astype(np.float32)
-    out["n_latin_words"] = s.apply(lambda t: len(_RE_LATIN_WORD.findall(t))).astype(np.float32)
-    out["has_emoji"]     = (out["n_emoji_token"] > 0).map({True: "yes", False: "no"})
-    out["has_codeswitch"]= (out["n_latin_words"] >= 2).map({True: "yes", False: "no"})
-    out["has_hashtag"]   = s.apply(lambda t: "yes" if _RE_HASHTAG.search(t) else "no")
+    out["text_length"]    = s.str.len().astype(np.float32)
+    out["n_words"]        = s.str.split().apply(len).astype(np.float32)
+    out["n_exclamation"]  = s.str.count("!").astype(np.float32)
+    out["n_question"]     = s.str.count(r"\?").astype(np.float32)
+    out["n_emoji_token"]  = s.apply(lambda t: len(_RE_EMOJI_TOKEN.findall(t))).astype(np.float32)
+    out["n_hashtag"]      = s.str.count("#").astype(np.float32)
+    out["n_latin_words"]  = s.apply(lambda t: len(_RE_LATIN_WORD.findall(t))).astype(np.float32)
+    # Engagement signals — unavailable at inference; filled with NaN so that
+    # TabularPreprocessor imputes them using training-set means.
+    out["likes"]          = np.nan
+    out["comments"]       = np.nan
+    out["shares"]         = np.nan
+    # Categorical
+    out["has_emoji"]      = (out["n_emoji_token"] > 0).map({True: "yes", False: "no"})
+    out["has_codeswitch"] = (out["n_latin_words"] >= 2).map({True: "yes", False: "no"})
+    out["has_hashtag"]    = s.apply(lambda t: "yes" if _RE_HASHTAG.search(t) else "no")
+    out["is_crawled"]     = "0"   # new texts are not from the crawled dataset
     return out
 
 
-# Default behavior signal columns used by Experiment 3 of the ablation.
+# Column lists must mirror TabularPreprocessor.numerical_cols / categorical_cols.
 DEFAULT_NUM_COLS: List[str] = [
-    "text_length", "n_words", "n_exclam", "n_question",
-    "n_emoji_token", "n_latin_words",
+    "text_length", "n_words", "n_exclamation", "n_question",
+    "n_emoji_token", "n_hashtag", "n_latin_words", "likes", "comments", "shares",
 ]
-DEFAULT_CAT_COLS: List[str] = ["has_emoji", "has_codeswitch", "has_hashtag"]
+DEFAULT_CAT_COLS: List[str] = ["has_emoji", "has_codeswitch", "has_hashtag", "is_crawled"]
 
 
 # =========================================================================== #
