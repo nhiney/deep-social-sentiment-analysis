@@ -17,9 +17,12 @@ from __future__ import annotations
 import contextlib
 import logging
 import os
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException, status
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
 logger = logging.getLogger(__name__)
@@ -179,6 +182,15 @@ app = FastAPI(
     version="1.0.0",
     lifespan=_lifespan,
 )
+
+# Serve report figures at /figures/<filename>
+_FIGURES_DIR = Path(__file__).resolve().parents[1] / "reports" / "figures"
+if _FIGURES_DIR.exists():
+    app.mount("/figures", StaticFiles(directory=str(_FIGURES_DIR)), name="figures")
+
+@app.get("/", include_in_schema=False)
+def root() -> FileResponse:
+    return FileResponse(Path(__file__).resolve().parent / "static" / "index.html")
 
 
 def _require_predictor():
