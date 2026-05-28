@@ -950,10 +950,11 @@ Imbalance ratio joy/disgust = 3.1× → cần class weights (đã implement tron
 - [x] Kết quả thực tế điền vào bảng 9.2 ✅ B7
 
 ### 10.4 App & API
-- [ ] **Streamlit app test live** — checkpoint đã có local, cần chạy `streamlit run app/app.py`
+- [x] **Streamlit app test live** — boots OK, health=ok ✅ B8
 - [x] FastAPI endpoints implement đầy đủ — 4 endpoints, degraded mode ✅ B3+B7
 - [x] Inference API column names synced với TabularPreprocessor ✅ B7
-- [ ] Demo demo LIME live với câu tiếng Việt thực tế trên Streamlit
+- [x] **LIME live** — /predict/explain trả đúng: joy→"vui"(0.41), "😊"(0.16), HTML highlight OK ✅ B8
+- [x] Inference 5/5 đúng nhãn — joy/anger/sadness/fear/neutral ✅ B8
 
 ### 10.5 Code Quality
 - [x] Unit tests FastAPI (`tests/test_api.py` — 25 tests, 100% pass) ✅ B7 fix degraded mode
@@ -985,7 +986,7 @@ Imbalance ratio joy/disgust = 3.1× → cần class weights (đã implement tron
 | 2026-05-24 (B4) | Script pseudo-labeling (`scripts/pseudo_label_apify.py` — mDeBERTa-v3 NLI zero-shot, 7 Vietnamese emotion hypotheses, confidence threshold 0.35, all 990 posts). Update `prepare_data.py` — 3-source merge (crawled + UIT-VSMEC + pseudo), tabular feature derivation, interaction median imputation, 20-column Parquet output. Smoke test OK: 1769→20cols. |
 | 2026-05-25 (B5) | `scripts/download_uit_vsmec.py` — auto download + run pipeline (1 command). `data/external/teencode.json` — 170+ extended slang entries. `tests/test_preprocessing.py` — 64 tests (TeencodeNormalizer + TabularPreprocessor + stratified_split + kappa), 100% pass. `tests/test_models.py` — 27 tests (LateFusionConfig + DnnBaseline + TfidfBaseline), no GPU needed, 100% pass. `notebooks/02_model_analysis.ipynb` — 8-section template (learning curves, confusion matrix, ablation bar chart, error analysis, LIME) với synthetic placeholder, sẵn sàng điền số thật. Tổng: 116 tests all pass. |
 | 2026-05-26 (B7) | Deploy model local từ Drive (5.8GB, 29 files). Fix inference.py column names (n_exclam→n_exclamation, thêm n_hashtag/likes/comments/shares/is_crawled). Fix notebook 02 API calls. Chạy notebook 02 thành công với số thật → 5 figures. Fix lifespan degraded mode bug (app/main.py). Fix TestDegradedMode fixture. 116/116 tests. Xóa colab_sentiment/ + cache folders. |
-| 2026-05-28 (B8) | Commit test_dataset.py (30 tests) + test_evaluate.py (39 tests). Full suite: 185/185 pass. Cập nhật PROJECT_ANALYSIS + checklist. |
+| 2026-05-28 (B8) | Commit test_dataset.py (30 tests) + test_evaluate.py (39 tests). Full suite: 185/185 pass. Test Streamlit+FastAPI live: Streamlit boots, /health=ok, /predict 5/5 đúng nhãn, /predict/explain LIME trả "vui"(0.41)+"😊"(0.16) cho câu joy, HTML highlight 1181 chars. |
 
 ---
 
