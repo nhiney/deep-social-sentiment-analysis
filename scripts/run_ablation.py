@@ -1,21 +1,25 @@
 """Ablation study: prove the contribution of each architectural component.
 
-We run THREE independent training runs against the *same* train/val/test
-splits (identical seed → identical row assignment) and tabulate F1-Macro,
-Precision, Recall and Accuracy for each:
+We run THREE (optionally FOUR) independent training runs against the *same*
+train/val/test splits (identical seed → identical row assignment) and tabulate
+F1-Macro, Precision, Recall and Accuracy for each:
 
 ================  =================  =================  =================
-Experiment        Teencode norm.     XLM-R Text Branch  FT-Transformer
+Experiment        Teencode norm.     Text Backbone      FT-Transformer
 ================  =================  =================  =================
-1. XLM-R only     ❌                 ✅                 ❌
-2. + Teencode     ✅                 ✅                 ❌
-3. Full Fusion    ✅                 ✅                 ✅
+1. XLM-R only     ❌                 XLM-R              ❌
+2. + Teencode     ✅                 XLM-R              ❌
+3. Full Fusion    ✅                 XLM-R              ✅
+4. PhoBERT        ✅                 PhoBERT-v2         ❌  (--phobert)
 ================  =================  =================  =================
 
 Run::
 
     # Full run (recommended on a GPU machine)
     python -m scripts.run_ablation --raw data/raw/crawled_emotions.xlsx
+
+    # Include Exp4 — PhoBERT vs XLM-R comparison
+    python -m scripts.run_ablation --raw data/raw/crawled_emotions.xlsx --phobert
 
     # Quick verification on CPU (tiny model, few epochs)
     python -m scripts.run_ablation --raw data/raw/crawled_emotions.xlsx --quick
@@ -306,6 +310,7 @@ def run_experiment(
 
     return {
         "experiment":      name,
+        "text_model":      text_model_name,
         "use_normalizer":  use_normalizer,
         "use_tabular":     use_tabular,
         "best_epoch":      hist["best_epoch"],
@@ -386,13 +391,37 @@ def main(args: argparse.Namespace) -> None:
              text_col="norm_text", use_normalizer=False, use_tabular=True),
     ]
 
+    if args.phobert:
+        # 4. PhoBERT-v2 vs XLM-R — same conditions as Exp2 (normalized text,
+        #    no tabular branch) so the ONLY variable is the text backbone.
+        #    Note: PhoBERT was pre-trained on word-segmented Vietnamese; we skip
+        #    VnCoreNLP segmentation here for simplicity — performance is slightly
+        #    lower than the full pipeline but still a valid comparison point.
+        grid.append(dict(
+            name="exp4_phobert",
+            text_col="norm_text", use_normalizer=False, use_tabular=False,
+        ))
+        logger.info("Exp4 (PhoBERT) added — backbone: vinai/phobert-base-v2")
+
+    PHOBERT_MODEL = "vinai/phobert-base-v2"
+
     rows: List[Dict[str, Any]] = []
     for spec in grid:
+        # Exp4 always uses PhoBERT regardless of --text-model flag.
+        backbone = (
+            PHOBERT_MODEL
+            if spec["name"] == "exp4_phobert"
+            else text_model
+        )
+        # PhoBERT tokenizer max_length: Vietnamese word-BPE is typically longer
+        # than XLM-R subword, so cap at 256 to avoid silent truncation.
+        this_max_length = 256 if spec["name"] == "exp4_phobert" else max_length
+
         result = run_experiment(
             **spec,
             train_df=train_df, val_df=val_df, test_df=test_df,
-            text_model_name=text_model,
-            max_length=max_length,
+            text_model_name=backbone,
+            max_length=this_max_length,
             epochs=epochs,
             batch_size=batch_size,
             learning_rate=lr,
@@ -405,9 +434,9 @@ def main(args: argparse.Namespace) -> None:
     # ---- Aggregate + persist ----
     df = pd.DataFrame(rows).set_index("experiment")
     cols_pretty = [
-        "use_normalizer", "use_tabular", "best_epoch", "train_seconds",
-        "f1_macro", "precision_macro", "recall_macro", "accuracy",
-        "f1_weighted",
+        "text_model", "use_normalizer", "use_tabular", "best_epoch",
+        "train_seconds", "f1_macro", "precision_macro", "recall_macro",
+        "accuracy", "f1_weighted",
     ]
     df = df[cols_pretty]
 
@@ -445,6 +474,8 @@ def parse_args() -> argparse.Namespace:
                    help="'auto' | 'cpu' | 'cuda' | 'cuda:N'")
     p.add_argument("--quick", action="store_true",
                    help="Use a tiny model + 2 epochs for a CPU-friendly smoke run.")
+    p.add_argument("--phobert", action="store_true",
+                   help="Add Exp4: PhoBERT-v2 vs XLM-R under identical conditions (Exp2 setup).")
     return p.parse_args()
 
 
