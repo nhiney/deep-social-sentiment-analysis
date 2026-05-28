@@ -86,6 +86,7 @@ tb_logs/
 outputs/
 reports/figures/*
 !reports/figures/.gitkeep
+!reports/figures/ablation_with_phobert.png
 
 # HuggingFace cache
 .cache/
