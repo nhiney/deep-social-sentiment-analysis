@@ -158,10 +158,19 @@ def run_shap(predict_fn, test_num: np.ndarray, num_cols: list):
     logger.info("KernelExplainer: background=%d, explain=%d", len(background), len(explain_X))
     explainer = shap.KernelExplainer(predict_fn, background)
 
-    # shap_values: list of (n_explain, n_features) arrays, one per class
     n_samples = int(os.environ.get("SHAP_SAMPLES", "50"))
     shap_values = explainer.shap_values(explain_X, nsamples=n_samples, silent=True)
-    logger.info("SHAP done. Shape per class: %s", np.array(shap_values[0]).shape)
+
+    # Normalize to list-of-classes: list[n_classes] of (n_samples, n_features)
+    # Older SHAP: already a list. Newer SHAP: single ndarray (n_samples, n_features, n_classes)
+    if isinstance(shap_values, np.ndarray):
+        if shap_values.ndim == 3:
+            shap_values = [shap_values[:, :, c] for c in range(shap_values.shape[2])]
+        elif shap_values.ndim == 2:
+            shap_values = [shap_values]
+
+    logger.info("SHAP done. n_classes=%d, shape per class: %s",
+                len(shap_values), np.array(shap_values[0]).shape)
     return shap_values, explain_X
 
 
