@@ -31,15 +31,16 @@ Phân loại cảm xúc tiếng Việt 7 lớp trên mạng xã hội — kiến
 | surprise | 0.8243 | 197 |
 | neutral | 0.6081 | 236 |
 
-### Ablation study (8961 mẫu, 5 epochs/experiment)
+### Ablation study (9616 mẫu)
 
-| Experiment | Teencode | Tabular | F1-Macro | Accuracy |
-|---|---|---|---|---|
-| XLM-R only | ❌ | ❌ | 0.6235 | 0.6424 |
-| + Teencode normalization | ✅ | ❌ | **0.6548** | **0.6647** |
-| + Tabular fusion | ✅ | ✅ | 0.6454 | 0.6587 |
+| Experiment | Backbone | Teencode | Tabular | F1-Macro | Accuracy |
+|---|---|---|---|---|---|
+| Exp1: XLM-R only | XLM-RoBERTa | ❌ | ❌ | 0.6235 | 0.6424 |
+| Exp2: + Teencode | XLM-RoBERTa | ✅ | ❌ | 0.6548 | 0.6647 |
+| Exp3: Full Fusion | XLM-RoBERTa | ✅ | ✅ | 0.6454 | 0.6587 |
+| **Exp4: PhoBERT-v2** | **PhoBERT-v2** | ✅ | ❌ | **0.7186** | **0.7212** |
 
-**Kết luận:** Teencode normalization đóng góp +3.1 F1-Macro so với raw text. Tabular branch với text-derived proxy features không bù thêm trong setting này — real engagement data (likes/comments/shares) cần nhiều mẫu có nhãn thật để thể hiện hiệu quả.
+**Kết luận:** Teencode normalization đóng góp +3.1 F1-Macro so với raw text. PhoBERT-v2 (pre-train chuyên biệt tiếng Việt) đạt F1=0.7186, cao hơn XLM-R +6.37% trong cùng điều kiện (Exp4 vs Exp2).
 
 ## Dataset
 
