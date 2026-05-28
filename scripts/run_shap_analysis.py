@@ -21,6 +21,7 @@ Output
 from __future__ import annotations
 
 import logging
+import os
 import sys
 import warnings
 from pathlib import Path
@@ -62,9 +63,10 @@ FIGURES_DIR.mkdir(parents=True, exist_ok=True)
 NEUTRAL_TEXT = "bài viết này"
 
 # Number of background samples for KernelExplainer (more → more accurate, slower)
-N_BACKGROUND = 30
+# For full Colab run: N_BACKGROUND=30, N_EXPLAIN=80, nsamples=100
+N_BACKGROUND = int(os.environ.get("SHAP_BG", "10"))
 # Number of test samples to explain
-N_EXPLAIN    = 80
+N_EXPLAIN    = int(os.environ.get("SHAP_N", "15"))
 RANDOM_SEED  = 42
 
 
@@ -157,7 +159,8 @@ def run_shap(predict_fn, test_num: np.ndarray, num_cols: list):
     explainer = shap.KernelExplainer(predict_fn, background)
 
     # shap_values: list of (n_explain, n_features) arrays, one per class
-    shap_values = explainer.shap_values(explain_X, nsamples=100, silent=True)
+    n_samples = int(os.environ.get("SHAP_SAMPLES", "50"))
+    shap_values = explainer.shap_values(explain_X, nsamples=n_samples, silent=True)
     logger.info("SHAP done. Shape per class: %s", np.array(shap_values[0]).shape)
     return shap_values, explain_X
 
