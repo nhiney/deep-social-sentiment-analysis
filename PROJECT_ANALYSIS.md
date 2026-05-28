@@ -871,9 +871,11 @@ Imbalance ratio joy/disgust = 3.1× → cần class weights (đã implement tron
          - Implement GatedFusionModel (thay concat bằng gated mechanism)
          - So sánh với LateFusionModel (concat) trong ablation
 
-[ ] 4.4  SHAP visualization cho tabular branch:
-         - shap.TreeExplainer / KernelExplainer trên tabular features
-         - Heatmap: feature × emotion class
+[x] 4.4  SHAP visualization cho tabular branch: ✅ DONE B10
+         - KernelExplainer (BG=20, N=50) trên tabular features, T4 GPU ~12 phút
+         - shap_tabular.png: heatmap 10 features × 7 emotions (surprise/neutral dominated)
+         - shap_summary.png: feature importance — text_length > n_words > n_latin_words > shares > comments
+         - Top finding: tabular branch ảnh hưởng nhất đến surprise/neutral; joy/sadness/anger chủ yếu do text branch
 ```
 
 ---
@@ -918,7 +920,7 @@ Imbalance ratio joy/disgust = 3.1× → cần class weights (đã implement tron
 | **Notebook 02 số thật + 5 figures** | Thấp | ⭐⭐⭐ | ✅ DONE B7 |
 | **PhoBERT vs XLM-R comparison** | Thấp | ⭐⭐⭐⭐ | ✅ DONE B8 — Exp4 PhoBERT F1=0.7186 (+0.0637 vs XLM-R Exp2) |
 | **Pseudo-label + augment** | Trung bình | ⭐⭐⭐ | ⬜ Cần Colab GPU (checkpoint đã có local) |
-| **SHAP tabular attribution** | Trung bình | ⭐⭐⭐⭐ | ⬜ Cần Colab (checkpoint đã có local) |
+| **SHAP tabular attribution** | Trung bình | ⭐⭐⭐⭐ | ✅ DONE B10 — shap_tabular.png + shap_summary.png, top: text_length > n_words > n_latin_words |
 | **Gated Fusion variant** | Cao | ⭐⭐⭐⭐⭐ | ⬜ Chưa làm — implement + train |
 
 ---
@@ -968,7 +970,7 @@ Imbalance ratio joy/disgust = 3.1× → cần class weights (đã implement tron
 
 ### 10.6 Advanced (điểm xuất sắc)
 - [x] **PhoBERT vs XLM-R** comparison (Exp4) ✅ B8 — F1=0.7186 (+6.37% vs XLM-R), PhoBERT thắng
-- [ ] **SHAP** visualization cho tabular branch — cần Colab (checkpoint local sẵn)
+- [x] **SHAP** visualization cho tabular branch ✅ B10 — `reports/figures/shap_tabular.png` + `shap_summary.png`
 - [ ] Pseudo-label 990 unlabeled posts bằng model đã train — cần Colab
 - [ ] Gated Fusion variant — implement + train
 

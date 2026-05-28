@@ -3,392 +3,488 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Deep Social Sentiment Analysis</title>
+<title>ViEmotion — Vietnamese Emotion Classification</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
+  :root { --indigo: #4f46e5; --indigo-light: #eef2ff; --border: #e2e8f0; }
   * { font-family: 'Inter', sans-serif; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
 
-  /* ── Tabs ── */
-  .tab-btn { transition: all .2s; }
-  .tab-btn.active {
-    background: #1e40af; color: white;
-    box-shadow: 0 2px 12px rgba(30,64,175,.35);
-  }
+  /* Tab panes */
   .tab-pane { display: none; }
-  .tab-pane.active { display: block; animation: fadeIn .25s ease; }
-  @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
+  .tab-pane.active { display: block; animation: fadeUp .2s ease; }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
 
-  /* ── Hero ── */
-  .hero-bg {
-    background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 45%, #1d4ed8 100%);
-  }
+  /* Nav underline indicator */
+  .nav-tab { position:relative; padding: 12px 16px; font-size:.875rem; font-weight:500; color:#64748b; cursor:pointer; transition:color .15s; white-space:nowrap; display:flex; align-items:center; gap:7px; border:none; background:none; }
+  .nav-tab:hover { color:var(--indigo); }
+  .nav-tab.active { color:var(--indigo); }
+  .nav-tab.active::after { content:''; position:absolute; bottom:-1px; left:0; right:0; height:2px; background:var(--indigo); border-radius:2px 2px 0 0; }
 
-  /* ── Confidence bars ── */
-  .bar-fill {
-    height: 100%; border-radius: 4px;
-    transition: width .6s cubic-bezier(.4,0,.2,1);
-  }
+  /* Card */
+  .card { background:#fff; border:1px solid var(--border); border-radius:10px; padding:20px; }
 
-  /* ── Prediction card ── */
-  .pred-card { border-left-width: 5px; }
+  /* Section label */
+  .section-title { font-size:.6875rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.08em; border-left:3px solid var(--indigo); padding-left:10px; margin-bottom:16px; }
 
-  /* ── Step cards ── */
-  .step-num {
-    width: 34px; height: 34px; border-radius: 50%;
-    background: #1e40af; color: white;
-    display: flex; align-items: center; justify-content: center;
-    font-weight: 800; font-size: .9rem; flex-shrink: 0;
-  }
+  /* Data table */
+  .data-table { width:100%; border-collapse:collapse; font-size:.8125rem; }
+  .data-table th { background:#f8fafc; font-size:.6875rem; font-weight:600; color:#94a3b8; text-transform:uppercase; letter-spacing:.06em; padding:9px 14px; border-bottom:1px solid var(--border); text-align:left; }
+  .data-table td { padding:9px 14px; border-bottom:1px solid #f1f5f9; }
+  .data-table tbody tr:last-child td { border-bottom:none; }
+  .data-table tbody tr:hover td { background:#fafafa; }
 
-  /* ── Figure grid ── */
-  .fig-card { overflow: hidden; }
-  .fig-card img { transition: transform .3s; }
-  .fig-card:hover img { transform: scale(1.03); }
+  /* Probability bar */
+  .prob-track { height:5px; background:#f1f5f9; border-radius:3px; overflow:hidden; }
+  .prob-fill { height:100%; border-radius:3px; transition:width .5s cubic-bezier(.4,0,.2,1); }
 
-  /* ── LIME box ── */
-  #lime-html { line-height: 2.2; font-size: .95rem; }
-  #lime-html span { border-radius: 3px; padding: 1px 2px; }
+  /* Status dot */
+  .dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .dot-ok  { background:#22c55e; box-shadow:0 0 0 3px rgba(34,197,94,.18); }
+  .dot-err { background:#ef4444; animation:blink 1.2s infinite; }
+  .dot-load { background:#f59e0b; animation:blink 1.2s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.35} }
 
-  /* ── Spinner ── */
-  .spinner {
-    width: 28px; height: 28px; border: 3px solid #dbeafe;
-    border-top-color: #1e40af; border-radius: 50%;
-    animation: spin .7s linear infinite; display: inline-block;
-  }
-  @keyframes spin { to{transform:rotate(360deg)} }
+  /* Spinner */
+  .spinner { width:22px; height:22px; border:2px solid #e2e8f0; border-top-color:var(--indigo); border-radius:50%; animation:spin .55s linear infinite; flex-shrink:0; }
+  @keyframes spin { to { transform:rotate(360deg); } }
 
-  /* ── Scrollbar ── */
-  ::-webkit-scrollbar { width: 6px; }
-  ::-webkit-scrollbar-thumb { background: #93c5fd; border-radius: 4px; }
+  /* Tag/badge */
+  .tag { display:inline-flex; align-items:center; padding:2px 9px; border-radius:4px; font-size:.6875rem; font-weight:600; }
 
-  /* ── Status dot ── */
-  .dot-ok  { background: #22c55e; }
-  .dot-err { background: #ef4444; }
-  .dot-blink { animation: blink 1.2s infinite; }
-  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+  /* Emotion chip */
+  .emo-chip { display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:5px; font-size:.75rem; font-weight:600; }
+
+  /* Fig card */
+  .fig-card { border:1px solid var(--border); border-radius:8px; overflow:hidden; cursor:pointer; transition:box-shadow .2s; }
+  .fig-card:hover { box-shadow:0 4px 16px rgba(0,0,0,.09); }
+  .fig-card img { width:100%; display:block; object-fit:cover; }
+  .fig-cap { padding:7px 11px; font-size:.6875rem; font-weight:500; color:#64748b; background:#f8fafc; }
+
+  /* Step circle */
+  .step-num { width:26px; height:26px; border-radius:50%; background:var(--indigo-light); color:var(--indigo); font-size:.6875rem; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+
+  /* Input */
+  .form-input { width:100%; border:1px solid var(--border); border-radius:7px; padding:8px 12px; font-size:.875rem; outline:none; transition:border-color .15s, box-shadow .15s; }
+  .form-input:focus { border-color:var(--indigo); box-shadow:0 0 0 3px rgba(79,70,229,.12); }
+
+  /* Button */
+  .btn-primary { background:var(--indigo); color:#fff; font-weight:600; font-size:.875rem; padding:9px 20px; border-radius:7px; border:none; cursor:pointer; transition:background .15s; width:100%; }
+  .btn-primary:hover { background:#4338ca; }
+  .btn-primary:disabled { background:#a5b4fc; cursor:not-allowed; }
+  .btn-secondary { background:#fff; color:#475569; font-weight:500; font-size:.8125rem; padding:7px 16px; border-radius:7px; border:1px solid var(--border); cursor:pointer; transition:background .15s; }
+  .btn-secondary:hover { background:#f8fafc; }
+
+  /* Result card left border */
+  .result-card { border-left-width:4px; }
+
+  /* Lightbox */
+  #lightbox { position:fixed; inset:0; z-index:999; background:rgba(0,0,0,.82); display:none; align-items:center; justify-content:center; padding:20px; }
+  #lightbox img { max-width:100%; max-height:90vh; border-radius:8px; box-shadow:0 20px 60px rgba(0,0,0,.5); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width:5px; height:5px; }
+  ::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:3px; }
+
+  /* LIME highlight */
+  #lime-display span { border-radius:3px; margin:1px; padding:1px 3px; }
 </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
+<body class="bg-slate-50 min-h-screen">
 
-<!-- ═══════════════════════ HEADER ═══════════════════════ -->
-<header class="hero-bg text-white px-6 py-8 shadow-xl">
-  <div class="max-w-6xl mx-auto">
-    <div class="flex items-start justify-between flex-wrap gap-4">
-      <div>
-        <h1 class="text-3xl font-black tracking-tight mb-1">🧠 Deep Social Sentiment Analysis</h1>
-        <p class="text-blue-200 text-sm font-medium mb-3">
-          Phân loại cảm xúc tiếng Việt 7 lớp trên mạng xã hội · Đồ án tốt nghiệp
-        </p>
-        <div class="flex flex-wrap gap-2">
-          <span class="bg-white/15 border border-white/25 rounded-full px-3 py-0.5 text-xs font-semibold">XLM-RoBERTa</span>
-          <span class="bg-white/15 border border-white/25 rounded-full px-3 py-0.5 text-xs font-semibold">FT-Transformer</span>
-          <span class="bg-white/15 border border-white/25 rounded-full px-3 py-0.5 text-xs font-semibold">Late Fusion</span>
-          <span class="bg-white/15 border border-white/25 rounded-full px-3 py-0.5 text-xs font-semibold">LIME Explainability</span>
-          <span class="bg-white/15 border border-white/25 rounded-full px-3 py-0.5 text-xs font-semibold">Ekman 7-class</span>
-          <span class="bg-white/15 border border-white/25 rounded-full px-3 py-0.5 text-xs font-semibold">Teencode NLP</span>
-        </div>
+<!-- ══════════════ TOPBAR ══════════════ -->
+<header class="bg-white border-b border-slate-200">
+  <div class="max-w-7xl mx-auto px-5 h-14 flex items-center justify-between gap-4">
+
+    <!-- Brand -->
+    <div class="flex items-center gap-3 flex-shrink-0">
+      <div class="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center">
+        <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/>
+        </svg>
       </div>
-      <div class="bg-white/10 rounded-xl px-4 py-3 text-center border border-white/20">
-        <div class="flex items-center gap-2 mb-1">
-          <span class="w-2.5 h-2.5 rounded-full dot-blink" id="status-dot"></span>
-          <span class="text-xs font-semibold" id="status-text">Đang kiểm tra...</span>
-        </div>
-        <div class="text-2xl font-black" id="header-f1">0.6877</div>
-        <div class="text-blue-200 text-xs">F1-Macro</div>
+      <div>
+        <div class="text-sm font-bold text-slate-900 leading-none">ViEmotion</div>
+        <div class="text-xs text-slate-400 mt-0.5 hidden sm:block">Late Fusion · 7-class Ekman · Vietnamese NLP</div>
       </div>
     </div>
 
-    <!-- Metric row -->
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
-      <div class="bg-white/10 rounded-xl px-4 py-3 border border-white/20 text-center">
-        <div class="text-2xl font-black">0.6877</div><div class="text-blue-200 text-xs mt-0.5">F1-Macro</div>
+    <!-- Center metrics -->
+    <div class="hidden md:flex items-center gap-5 text-center">
+      <div><div class="text-xs text-slate-400 leading-none mb-1">F1-Macro</div><div class="text-sm font-bold text-slate-800 mono">0.6877</div></div>
+      <div class="w-px h-7 bg-slate-200"></div>
+      <div><div class="text-xs text-slate-400 leading-none mb-1">Accuracy</div><div class="text-sm font-bold text-slate-800 mono">0.7020</div></div>
+      <div class="w-px h-7 bg-slate-200"></div>
+      <div><div class="text-xs text-slate-400 leading-none mb-1">Test set</div><div class="text-sm font-bold text-slate-800 mono">9,616</div></div>
+      <div class="w-px h-7 bg-slate-200"></div>
+      <div><div class="text-xs text-slate-400 leading-none mb-1">Classes</div><div class="text-sm font-bold text-slate-800 mono">7</div></div>
+    </div>
+
+    <!-- Right: status + API -->
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5">
+        <div class="dot dot-load" id="status-dot"></div>
+        <span class="text-xs font-medium text-slate-600" id="status-text">Đang kiểm tra</span>
       </div>
-      <div class="bg-white/10 rounded-xl px-4 py-3 border border-white/20 text-center">
-        <div class="text-2xl font-black">0.7020</div><div class="text-blue-200 text-xs mt-0.5">Accuracy</div>
-      </div>
-      <div class="bg-white/10 rounded-xl px-4 py-3 border border-white/20 text-center">
-        <div class="text-2xl font-black">0.7029</div><div class="text-blue-200 text-xs mt-0.5">F1-Weighted</div>
-      </div>
-      <div class="bg-white/10 rounded-xl px-4 py-3 border border-white/20 text-center">
-        <div class="text-2xl font-black">9 616</div><div class="text-blue-200 text-xs mt-0.5">Test samples</div>
-      </div>
+      <a href="/docs" target="_blank" class="hidden sm:flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800">
+        API Docs
+        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+      </a>
     </div>
   </div>
 </header>
 
-<!-- ═══════════════════════ TABS NAV ═══════════════════════ -->
-<div class="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
-  <div class="max-w-6xl mx-auto px-4 flex gap-1 py-2 overflow-x-auto">
-    <button onclick="switchTab('overview')" class="tab-btn active rounded-lg px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-blue-50 whitespace-nowrap" id="btn-overview">🏠 Tổng quan</button>
-    <button onclick="switchTab('demo')"     class="tab-btn rounded-lg px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-blue-50 whitespace-nowrap" id="btn-demo">🔍 Demo trực tiếp</button>
-    <button onclick="switchTab('results')"  class="tab-btn rounded-lg px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-blue-50 whitespace-nowrap" id="btn-results">📊 Kết quả nghiên cứu</button>
-    <button onclick="switchTab('method')"   class="tab-btn rounded-lg px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-blue-50 whitespace-nowrap" id="btn-method">📐 Phương pháp</button>
-    <a href="/docs" target="_blank" class="tab-btn rounded-lg px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-blue-50 whitespace-nowrap ml-auto">⚙️ API Docs</a>
+<!-- ══════════════ NAV TABS ══════════════ -->
+<nav class="bg-white border-b border-slate-200 sticky top-0 z-30 overflow-x-auto">
+  <div class="max-w-7xl mx-auto px-5 flex">
+    <button class="nav-tab active" id="btn-overview" onclick="switchTab('overview')">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"/></svg>
+      Tổng quan
+    </button>
+    <button class="nav-tab" id="btn-demo" onclick="switchTab('demo')">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z"/></svg>
+      Demo trực tiếp
+    </button>
+    <button class="nav-tab" id="btn-batch" onclick="switchTab('batch')">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM3.75 12h.007v.008H3.75V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-.375 5.25h.007v.008H3.75v-.008zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/></svg>
+      Phân tích hàng loạt
+    </button>
+    <button class="nav-tab" id="btn-results" onclick="switchTab('results')">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/></svg>
+      Kết quả nghiên cứu
+    </button>
+    <button class="nav-tab" id="btn-method" onclick="switchTab('method')">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/></svg>
+      Phương pháp
+    </button>
   </div>
-</div>
+</nav>
 
-<main class="max-w-6xl mx-auto px-4 py-6">
+<main class="max-w-7xl mx-auto px-5 py-6">
 
-<!-- ═══════════════════════ TAB: TỔNG QUAN ═══════════════════════ -->
-<div id="tab-overview" class="tab-pane active">
+<!-- ══════════════════════════════════════════════ -->
+<!-- TAB: TỔNG QUAN                                -->
+<!-- ══════════════════════════════════════════════ -->
+<div id="tab-overview" class="tab-pane active space-y-5">
 
-  <!-- Architecture -->
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-    <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-      <h2 class="text-base font-bold text-blue-700 border-l-4 border-blue-600 pl-3 mb-4">Kiến trúc mô hình</h2>
-      <pre class="text-xs bg-gray-50 rounded-lg p-4 overflow-x-auto leading-5 text-gray-700">┌──────────────────────────────────────────────┐
-│              INPUT LAYER                     │
-│  ┌─────────────────┐  ┌───────────────────┐  │
-│  │   Văn bản       │  │ Hành vi người dùng│  │
-│  │  (text post)    │  │ likes/cmts/shares │  │
-│  └────────┬────────┘  └────────┬──────────┘  │
-│           │                    │             │
-│  ┌────────▼────────┐  ┌────────▼──────────┐  │
-│  │   Teencode      │  │ TabularPreprocessor│  │
-│  │  Normalizer     │  │ (num + cat encode) │  │
-│  └────────┬────────┘  └────────┬──────────┘  │
-│           │                    │             │
-│  ┌────────▼────────┐  ┌────────▼──────────┐  │
-│  │ XLM-RoBERTa     │  │  FT-Transformer   │  │
-│  │ [CLS] → 768d    │  │      → 192d       │  │
-│  └────────┬────────┘  └────────┬──────────┘  │
-│           └──────────┬─────────┘             │
-│                      │ Concat (960d)          │
-│             ┌────────▼────────┐              │
-│             │   Fusion MLP    │              │
-│             │ Linear→ReLU→Drop│              │
-│             └────────┬────────┘              │
-│                      │                       │
-│             ┌────────▼────────┐              │
-│             │ Softmax (7 lớp) │              │
-│             └─────────────────┘              │
-└──────────────────────────────────────────────┘</pre>
+  <!-- Architecture + XAI -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+    <div class="card lg:col-span-2">
+      <div class="section-title">Kiến trúc mô hình — Late Fusion</div>
+      <div class="space-y-2">
+        <div class="grid grid-cols-2 gap-3">
+          <div class="bg-blue-50 border border-blue-100 rounded-lg p-3">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="tag bg-blue-100 text-blue-700">Text Branch</span>
+            </div>
+            <div class="text-sm font-semibold text-slate-800">XLM-RoBERTa-base</div>
+            <div class="text-xs text-slate-500 mt-1">Teencode normalization → Tokenize → <span class="mono font-medium">[CLS]</span> pooling</div>
+            <div class="mt-2 text-right"><span class="mono text-xs font-bold text-blue-700">→ 768d</span></div>
+          </div>
+          <div class="bg-emerald-50 border border-emerald-100 rounded-lg p-3">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="tag bg-emerald-100 text-emerald-700">Tabular Branch</span>
+            </div>
+            <div class="text-sm font-semibold text-slate-800">FT-Transformer</div>
+            <div class="text-xs text-slate-500 mt-1">10 num. + 4 cat. → Feature embedding → Transformer block</div>
+            <div class="mt-2 text-right"><span class="mono text-xs font-bold text-emerald-700">→ 192d</span></div>
+          </div>
+        </div>
+        <div class="flex items-center justify-center gap-2 py-1">
+          <div class="h-5 w-px bg-slate-300"></div>
+          <span class="text-xs text-slate-400 font-medium">Concat (768 + 192 = 960d)</span>
+          <div class="h-5 w-px bg-slate-300"></div>
+        </div>
+        <div class="bg-indigo-50 border border-indigo-100 rounded-lg p-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <span class="tag bg-indigo-100 text-indigo-700 mb-2 inline-flex">Fusion Head</span>
+              <div class="text-sm font-semibold text-slate-800 mt-1">MLP Classifier</div>
+              <div class="text-xs text-slate-500 mt-1">Linear(960→256) → ReLU → Dropout(0.3) → Linear(256→7) → Softmax</div>
+            </div>
+            <div class="text-right flex-shrink-0 ml-4">
+              <div class="mono text-xs font-bold text-indigo-700">→ 7 classes</div>
+              <div class="text-xs text-slate-400 mt-0.5">Ekman emotions</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="grid grid-cols-3 gap-3 mt-4">
+        <div class="bg-slate-50 rounded-lg p-3 text-center border border-slate-100">
+          <div class="text-lg font-bold text-emerald-600">+3.1</div>
+          <div class="text-xs text-slate-500 mt-0.5">F1 từ Teencode</div>
+        </div>
+        <div class="bg-slate-50 rounded-lg p-3 text-center border border-slate-100">
+          <div class="text-lg font-bold text-indigo-600">+6.4%</div>
+          <div class="text-xs text-slate-500 mt-0.5">PhoBERT vs XLM-R</div>
+        </div>
+        <div class="bg-slate-50 rounded-lg p-3 text-center border border-slate-100">
+          <div class="text-lg font-bold text-slate-700">9,616</div>
+          <div class="text-xs text-slate-500 mt-0.5">Test samples</div>
+        </div>
+      </div>
     </div>
-    <div class="flex flex-col gap-4">
-      <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-        <h2 class="text-base font-bold text-blue-700 border-l-4 border-blue-600 pl-3 mb-4">Chi tiết kiến trúc</h2>
-        <div class="space-y-3">
-          <div class="flex gap-3 items-start">
-            <span class="bg-blue-100 text-blue-700 rounded-lg px-2 py-0.5 text-xs font-bold whitespace-nowrap mt-0.5">Text</span>
-            <p class="text-sm text-gray-600">XLM-RoBERTa-base · Teencode normalization trước · <code class="bg-gray-100 px-1 rounded">[CLS]</code> pooling → <strong>768d</strong></p>
+
+    <div class="card">
+      <div class="section-title">Explainability (XAI)</div>
+      <div class="space-y-3">
+        <div class="border border-slate-100 rounded-lg p-3">
+          <div class="flex items-center gap-2 mb-2">
+            <div class="w-2.5 h-2.5 rounded-full bg-emerald-500 flex-shrink-0"></div>
+            <span class="text-sm font-semibold text-slate-800">LIME — Token Attribution</span>
           </div>
-          <div class="flex gap-3 items-start">
-            <span class="bg-green-100 text-green-700 rounded-lg px-2 py-0.5 text-xs font-bold whitespace-nowrap mt-0.5">Tabular</span>
-            <p class="text-sm text-gray-600">FT-Transformer · 10 numerical + 4 categorical · Embedding → Transformer block → <strong>192d</strong></p>
-          </div>
-          <div class="flex gap-3 items-start">
-            <span class="bg-orange-100 text-orange-700 rounded-lg px-2 py-0.5 text-xs font-bold whitespace-nowrap mt-0.5">Fusion</span>
-            <p class="text-sm text-gray-600">Concat 768+192 = 960d · Linear(960→256) → ReLU → Dropout → Linear(256→7) → Softmax</p>
-          </div>
-          <div class="flex gap-3 items-start">
-            <span class="bg-purple-100 text-purple-700 rounded-lg px-2 py-0.5 text-xs font-bold whitespace-nowrap mt-0.5">XAI</span>
-            <p class="text-sm text-gray-600">LIME: tô màu token đóng góp · SHAP: feature importance tabular branch</p>
-          </div>
+          <p class="text-xs text-slate-500 leading-relaxed">Tô màu từng token theo đóng góp vào dự đoán. <span class="text-emerald-600 font-medium">Xanh lá</span> = ủng hộ nhãn, <span class="text-red-500 font-medium">đỏ</span> = phản đối. Model-agnostic, hoạt động trên toàn pipeline.</p>
         </div>
-        <div class="mt-4 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg px-3 py-2 text-sm text-blue-800">
-          💡 Teencode normalization đóng góp <strong>+3.1 F1-Macro</strong> so với raw text
+        <div class="border border-slate-100 rounded-lg p-3">
+          <div class="flex items-center gap-2 mb-2">
+            <div class="w-2.5 h-2.5 rounded-full bg-orange-500 flex-shrink-0"></div>
+            <span class="text-sm font-semibold text-slate-800">SHAP — Feature Importance</span>
+          </div>
+          <p class="text-xs text-slate-500 leading-relaxed">Phân tích tabular branch: xác định đặc trưng hành vi nào (likes, shares, độ dài...) ảnh hưởng nhất đến phân loại.</p>
         </div>
+        <div class="border border-slate-100 rounded-lg p-3">
+          <div class="flex items-center gap-2 mb-2">
+            <div class="w-2.5 h-2.5 rounded-full bg-blue-500 flex-shrink-0"></div>
+            <span class="text-sm font-semibold text-slate-800">Batch Analysis</span>
+          </div>
+          <p class="text-xs text-slate-500 leading-relaxed">Phân tích nhiều văn bản cùng lúc — tối đa 64 posts, kết quả dạng bảng có thể export.</p>
+        </div>
+        <button onclick="switchTab('demo')" class="w-full text-center text-xs font-semibold text-indigo-600 hover:text-indigo-800 py-2 rounded-lg border border-indigo-100 hover:bg-indigo-50 transition-colors">
+          Thử Demo ngay →
+        </button>
       </div>
     </div>
   </div>
 
-  <!-- Ablation table -->
-  <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6">
-    <h2 class="text-base font-bold text-blue-700 border-l-4 border-blue-600 pl-3 mb-4">Ablation Study</h2>
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
+  <!-- Ablation study -->
+  <div class="card">
+    <div class="section-title">Ablation Study — so sánh 4 cấu hình</div>
+    <div class="overflow-x-auto -mx-5 px-5">
+      <table class="data-table">
         <thead>
-          <tr class="bg-gray-50 border-b border-gray-200">
-            <th class="text-left px-4 py-3 font-semibold text-gray-700">Thí nghiệm</th>
-            <th class="text-left px-4 py-3 font-semibold text-gray-700">Backbone</th>
-            <th class="text-center px-3 py-3 font-semibold text-gray-700">Teencode</th>
-            <th class="text-center px-3 py-3 font-semibold text-gray-700">Tabular</th>
-            <th class="text-right px-4 py-3 font-semibold text-gray-700">F1-Macro</th>
-            <th class="text-right px-4 py-3 font-semibold text-gray-700">Accuracy</th>
+          <tr>
+            <th>Thí nghiệm</th>
+            <th>Backbone</th>
+            <th class="text-center">Teencode</th>
+            <th class="text-center">Tabular</th>
+            <th class="text-right">F1-Macro</th>
+            <th class="text-right">Accuracy</th>
+            <th class="text-right">Δ vs Exp1</th>
           </tr>
         </thead>
         <tbody>
-          <tr class="border-b border-gray-100 hover:bg-gray-50">
-            <td class="px-4 py-3 text-gray-800 font-medium">Exp1: XLM-R only</td>
-            <td class="px-4 py-3 text-gray-600 text-xs">XLM-RoBERTa</td>
-            <td class="px-3 py-3 text-center">❌</td><td class="px-3 py-3 text-center">❌</td>
-            <td class="px-4 py-3 text-right font-mono">0.6235</td>
-            <td class="px-4 py-3 text-right font-mono">0.6424</td>
+          <tr>
+            <td class="font-medium text-slate-800">Exp 1 — Baseline</td>
+            <td class="mono text-xs text-slate-500">XLM-RoBERTa</td>
+            <td class="text-center text-slate-300 text-sm">—</td>
+            <td class="text-center text-slate-300 text-sm">—</td>
+            <td class="text-right mono">0.6235</td>
+            <td class="text-right mono">0.6424</td>
+            <td class="text-right text-slate-400 text-xs">—</td>
           </tr>
-          <tr class="border-b border-gray-100 hover:bg-gray-50">
-            <td class="px-4 py-3 text-gray-800 font-medium">Exp2: + Teencode</td>
-            <td class="px-4 py-3 text-gray-600 text-xs">XLM-RoBERTa</td>
-            <td class="px-3 py-3 text-center">✅</td><td class="px-3 py-3 text-center">❌</td>
-            <td class="px-4 py-3 text-right font-mono">0.6548</td>
-            <td class="px-4 py-3 text-right font-mono">0.6647</td>
+          <tr>
+            <td class="font-medium text-slate-800">Exp 2 — + Teencode</td>
+            <td class="mono text-xs text-slate-500">XLM-RoBERTa</td>
+            <td class="text-center text-emerald-600 font-bold text-sm">✓</td>
+            <td class="text-center text-slate-300 text-sm">—</td>
+            <td class="text-right mono">0.6548</td>
+            <td class="text-right mono">0.6647</td>
+            <td class="text-right text-xs font-semibold text-emerald-600">+3.13</td>
           </tr>
-          <tr class="border-b border-gray-100 hover:bg-gray-50">
-            <td class="px-4 py-3 text-gray-800 font-medium">Exp3: Full Fusion</td>
-            <td class="px-4 py-3 text-gray-600 text-xs">XLM-RoBERTa</td>
-            <td class="px-3 py-3 text-center">✅</td><td class="px-3 py-3 text-center">✅</td>
-            <td class="px-4 py-3 text-right font-mono">0.6454</td>
-            <td class="px-4 py-3 text-right font-mono">0.6587</td>
+          <tr>
+            <td class="font-medium text-slate-800">Exp 3 — Full Fusion</td>
+            <td class="mono text-xs text-slate-500">XLM-RoBERTa</td>
+            <td class="text-center text-emerald-600 font-bold text-sm">✓</td>
+            <td class="text-center text-emerald-600 font-bold text-sm">✓</td>
+            <td class="text-right mono">0.6454</td>
+            <td class="text-right mono">0.6587</td>
+            <td class="text-right text-xs font-semibold text-red-500">−0.94</td>
           </tr>
-          <tr class="bg-green-50 border-b-2 border-green-300">
-            <td class="px-4 py-3 font-bold text-green-800">Exp4: PhoBERT-v2 ⭐</td>
-            <td class="px-4 py-3 text-gray-600 text-xs font-semibold">PhoBERT-v2</td>
-            <td class="px-3 py-3 text-center">✅</td><td class="px-3 py-3 text-center">❌</td>
-            <td class="px-4 py-3 text-right font-mono font-bold text-green-700">0.7186</td>
-            <td class="px-4 py-3 text-right font-mono font-bold text-green-700">0.7212</td>
+          <tr class="bg-indigo-50/60">
+            <td>
+              <span class="font-bold text-indigo-700">Exp 4 — PhoBERT-v2</span>
+              <span class="ml-2 tag bg-indigo-100 text-indigo-700">Best</span>
+            </td>
+            <td class="mono text-xs text-indigo-600 font-semibold">PhoBERT-v2</td>
+            <td class="text-center text-emerald-600 font-bold text-sm">✓</td>
+            <td class="text-center text-slate-300 text-sm">—</td>
+            <td class="text-right mono font-bold text-indigo-700">0.7186</td>
+            <td class="text-right mono font-bold text-indigo-700">0.7212</td>
+            <td class="text-right text-xs font-bold text-emerald-600">+6.38</td>
           </tr>
         </tbody>
       </table>
     </div>
-    <p class="text-xs text-gray-500 mt-3">PhoBERT-v2 cao hơn XLM-R Exp2 <span class="font-bold text-green-600">+6.37%</span> F1-Macro</p>
+    <p class="text-xs text-slate-400 mt-3">Δ = F1-Macro difference vs Exp1 × 100 · Tất cả thí nghiệm dùng cùng train/val/test split 70/15/15</p>
   </div>
 
   <!-- EDA figures -->
-  <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6">
-    <h2 class="text-base font-bold text-blue-700 border-l-4 border-blue-600 pl-3 mb-4">Phân tích dữ liệu (EDA)</h2>
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      <div class="fig-card rounded-xl overflow-hidden border border-gray-100 shadow-sm cursor-pointer" onclick="openFig('/figures/label_distribution.png')">
-        <img src="/figures/label_distribution.png" alt="Phân phối nhãn" class="w-full object-cover" onerror="this.parentElement.classList.add('hidden')">
-        <div class="px-3 py-2 text-xs font-medium text-gray-600 bg-gray-50">Phân phối nhãn cảm xúc</div>
+  <div class="card">
+    <div class="section-title">Exploratory Data Analysis</div>
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      <div class="fig-card" onclick="openFig('/figures/label_distribution.png')">
+        <img src="/figures/label_distribution.png" alt="Label distribution" onerror="this.closest('.fig-card').style.display='none'">
+        <div class="fig-cap">Phân phối nhãn cảm xúc</div>
       </div>
-      <div class="fig-card rounded-xl overflow-hidden border border-gray-100 shadow-sm cursor-pointer" onclick="openFig('/figures/text_length_per_emotion.png')">
-        <img src="/figures/text_length_per_emotion.png" alt="Độ dài văn bản" class="w-full object-cover" onerror="this.parentElement.classList.add('hidden')">
-        <div class="px-3 py-2 text-xs font-medium text-gray-600 bg-gray-50">Độ dài văn bản theo cảm xúc</div>
+      <div class="fig-card" onclick="openFig('/figures/text_length_per_emotion.png')">
+        <img src="/figures/text_length_per_emotion.png" alt="Text length" onerror="this.closest('.fig-card').style.display='none'">
+        <div class="fig-cap">Độ dài văn bản theo cảm xúc</div>
       </div>
-      <div class="fig-card rounded-xl overflow-hidden border border-gray-100 shadow-sm cursor-pointer" onclick="openFig('/figures/correlation_heatmap.png')">
-        <img src="/figures/correlation_heatmap.png" alt="Tương quan" class="w-full object-cover" onerror="this.parentElement.classList.add('hidden')">
-        <div class="px-3 py-2 text-xs font-medium text-gray-600 bg-gray-50">Tương quan đặc trưng hành vi</div>
+      <div class="fig-card" onclick="openFig('/figures/correlation_heatmap.png')">
+        <img src="/figures/correlation_heatmap.png" alt="Correlation" onerror="this.closest('.fig-card').style.display='none'">
+        <div class="fig-cap">Tương quan đặc trưng hành vi</div>
       </div>
-      <div class="fig-card rounded-xl overflow-hidden border border-gray-100 shadow-sm cursor-pointer" onclick="openFig('/figures/boxplots_interaction_per_emotion.png')">
-        <img src="/figures/boxplots_interaction_per_emotion.png" alt="Boxplot" class="w-full object-cover" onerror="this.parentElement.classList.add('hidden')">
-        <div class="px-3 py-2 text-xs font-medium text-gray-600 bg-gray-50">Boxplot tương tác</div>
+      <div class="fig-card" onclick="openFig('/figures/boxplots_interaction_per_emotion.png')">
+        <img src="/figures/boxplots_interaction_per_emotion.png" alt="Boxplot" onerror="this.closest('.fig-card').style.display='none'">
+        <div class="fig-cap">Boxplot tương tác theo cảm xúc</div>
       </div>
-      <div class="fig-card rounded-xl overflow-hidden border border-gray-100 shadow-sm cursor-pointer" onclick="openFig('/figures/mean_interaction_heatmap.png')">
-        <img src="/figures/mean_interaction_heatmap.png" alt="Heatmap" class="w-full object-cover" onerror="this.parentElement.classList.add('hidden')">
-        <div class="px-3 py-2 text-xs font-medium text-gray-600 bg-gray-50">Heatmap tương tác trung bình</div>
+      <div class="fig-card" onclick="openFig('/figures/mean_interaction_heatmap.png')">
+        <img src="/figures/mean_interaction_heatmap.png" alt="Heatmap" onerror="this.closest('.fig-card').style.display='none'">
+        <div class="fig-cap">Heatmap tương tác trung bình</div>
       </div>
-      <div class="fig-card rounded-xl overflow-hidden border border-gray-100 shadow-sm cursor-pointer" onclick="openFig('/figures/violin_interaction_per_emotion.png')">
-        <img src="/figures/violin_interaction_per_emotion.png" alt="Violin" class="w-full object-cover" onerror="this.parentElement.classList.add('hidden')">
-        <div class="px-3 py-2 text-xs font-medium text-gray-600 bg-gray-50">Violin plot phân phối</div>
+      <div class="fig-card" onclick="openFig('/figures/violin_interaction_per_emotion.png')">
+        <img src="/figures/violin_interaction_per_emotion.png" alt="Violin" onerror="this.closest('.fig-card').style.display='none'">
+        <div class="fig-cap">Violin plot phân phối</div>
       </div>
     </div>
-    <p class="text-xs text-gray-400 mt-3">Nhấn vào ảnh để phóng to</p>
+    <p class="text-xs text-slate-400 mt-3">Nhấn vào ảnh để phóng to</p>
   </div>
 
-</div><!-- end tab-overview -->
+</div><!-- /tab-overview -->
 
 
-<!-- ═══════════════════════ TAB: DEMO ═══════════════════════ -->
-<div id="tab-demo" class="tab-pane">
-  <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+<!-- ══════════════════════════════════════════════ -->
+<!-- TAB: DEMO TRỰC TIẾP                           -->
+<!-- ══════════════════════════════════════════════ -->
+<div id="tab-demo" class="tab-pane space-y-5">
+  <div class="grid grid-cols-1 lg:grid-cols-5 gap-5">
 
     <!-- Input panel -->
     <div class="lg:col-span-3 space-y-4">
-      <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-        <h2 class="text-base font-bold text-blue-700 border-l-4 border-blue-600 pl-3 mb-4">Phân tích cảm xúc tiếng Việt</h2>
+      <div class="card">
+        <div class="section-title">Phân tích cảm xúc tiếng Việt</div>
 
-        <label class="block text-sm font-medium text-gray-700 mb-1">Chọn câu ví dụ</label>
-        <select id="example-select" onchange="fillExample()" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-blue-300">
-          <option value="">— Nhập tự do —</option>
-          <option value="Hôm nay sinh nhật đứa bạn thân nhất, vui quá trời!! Chúc mừng sinh nhật nha 🎂🎉 mãi yêu bạn lắm luôn">😊 Vui — Sinh nhật bạn thân</option>
-          <option value="Xa nhà mấy tháng rồi mà nhớ quá, nhớ mẹ, nhớ em... Hôm nay trời mưa lại càng buồn hơn 😢">😢 Buồn — Nhớ quê hương</option>
-          <option value="Kẹt xe 2 tiếng đồng hồ mà không nhúc nhích được, điên thật sự!!! Thành phố này giao thông tệ quá đi">😠 Tức giận — Kẹt xe</option>
-          <option value="Ngày mai thi mà chưa học được gì hết, lo sợ quá... Không biết có qua môn không nữa 😰">😨 Sợ hãi — Thi cử</option>
-          <option value="Quán này quảng cáo ngon mà ăn vào thất vọng ghê gớm, vừa đắt vừa dở, không bao giờ quay lại nữa">🤢 Chê — Đồ ăn tệ</option>
-          <option value="Ủa thật không?! Không thể tin được là chuyện đó lại xảy ra, shock nặng luôn á 😱 ai mà ngờ được">😲 Ngạc nhiên — Tin tức</option>
-          <option value="Phòng họp thay đổi sang phòng 3B, bắt đầu lúc 9 giờ sáng mai. Mọi người chú ý nhé.">😐 Trung tính — Thông báo</option>
-        </select>
+        <div class="mb-3">
+          <label class="block text-xs font-semibold text-slate-500 mb-1.5">Câu ví dụ</label>
+          <select id="example-select" onchange="fillExample()" class="form-input text-sm bg-white">
+            <option value="">— Nhập tự do —</option>
+            <option value="Hôm nay sinh nhật đứa bạn thân nhất, vui quá trời!! Chúc mừng sinh nhật nha 🎂🎉 mãi yêu bạn lắm luôn">Vui vẻ — Sinh nhật bạn thân</option>
+            <option value="Xa nhà mấy tháng rồi mà nhớ quá, nhớ mẹ, nhớ em... Hôm nay trời mưa lại càng buồn hơn 😢">Buồn bã — Nhớ quê hương</option>
+            <option value="Kẹt xe 2 tiếng đồng hồ mà không nhúc nhích được, điên thật sự!!! Thành phố này giao thông tệ quá đi">Tức giận — Kẹt xe</option>
+            <option value="Ngày mai thi mà chưa học được gì hết, lo sợ quá... Không biết có qua môn không nữa 😰">Sợ hãi — Thi cử</option>
+            <option value="Quán này quảng cáo ngon mà ăn vào thất vọng ghê gớm, vừa đắt vừa dở, không bao giờ quay lại nữa">Ghê tởm — Đồ ăn tệ</option>
+            <option value="Ủa thật không?! Không thể tin được là chuyện đó lại xảy ra, shock nặng luôn á 😱 ai mà ngờ được">Ngạc nhiên — Tin tức bất ngờ</option>
+            <option value="Phòng họp thay đổi sang phòng 3B, bắt đầu lúc 9 giờ sáng mai. Mọi người chú ý nhé.">Trung tính — Thông báo hành chính</option>
+          </select>
+        </div>
 
-        <label class="block text-sm font-medium text-gray-700 mb-1">Văn bản tiếng Việt</label>
-        <textarea id="text-input" rows="5"
-          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-300"
-          placeholder="Nhập bài đăng Facebook, comment, tweet tiếng Việt..."></textarea>
+        <div class="mb-3">
+          <label class="block text-xs font-semibold text-slate-500 mb-1.5">Văn bản tiếng Việt</label>
+          <textarea id="text-input" rows="5"
+            class="form-input resize-none text-sm"
+            placeholder="Nhập bài đăng Facebook, comment, tweet tiếng Việt..."></textarea>
+        </div>
 
-        <div class="grid grid-cols-3 gap-3 mt-3">
+        <div class="grid grid-cols-3 gap-3 mb-3">
           <div>
-            <label class="block text-xs text-gray-500 mb-1">👍 Likes</label>
-            <input type="number" id="likes" min="0" value="0" class="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300">
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Likes</label>
+            <input type="number" id="likes" min="0" value="0" class="form-input text-sm">
           </div>
           <div>
-            <label class="block text-xs text-gray-500 mb-1">💬 Comments</label>
-            <input type="number" id="comments" min="0" value="0" class="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300">
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Comments</label>
+            <input type="number" id="comments" min="0" value="0" class="form-input text-sm">
           </div>
           <div>
-            <label class="block text-xs text-gray-500 mb-1">🔁 Shares</label>
-            <input type="number" id="shares" min="0" value="0" class="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300">
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Shares</label>
+            <input type="number" id="shares" min="0" value="0" class="form-input text-sm">
           </div>
         </div>
 
-        <label class="flex items-center gap-2 mt-3 cursor-pointer">
-          <input type="checkbox" id="use-lime" checked class="w-4 h-4 accent-blue-600">
-          <span class="text-sm text-gray-700 font-medium">Giải thích LIME <span class="text-xs text-gray-400">(+10-15 giây)</span></span>
+        <label class="flex items-center gap-2.5 mb-4 cursor-pointer select-none">
+          <input type="checkbox" id="use-lime" checked class="w-4 h-4 rounded accent-indigo-600">
+          <span class="text-sm font-medium text-slate-700">Kèm giải thích LIME</span>
+          <span class="text-xs text-slate-400">(~10–15 giây)</span>
         </label>
 
-        <button onclick="runPredict()"
-          class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl transition-colors text-sm shadow-sm">
-          🔍 Phân tích cảm xúc
+        <button onclick="runPredict()" id="predict-btn" class="btn-primary flex items-center justify-center gap-2">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
+          Phân tích cảm xúc
         </button>
       </div>
     </div>
 
     <!-- Result panel -->
     <div class="lg:col-span-2 space-y-4">
-      <!-- Initial hint -->
-      <div id="result-hint" class="bg-blue-50 rounded-2xl p-6 border border-blue-100 text-center">
-        <div class="text-4xl mb-2">🎯</div>
-        <p class="text-sm text-blue-700 font-medium">Nhập văn bản và nhấn<br><strong>Phân tích cảm xúc</strong></p>
+      <!-- Placeholder -->
+      <div id="result-placeholder" class="card flex flex-col items-center justify-center py-12 text-center">
+        <div class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
+          <svg class="w-6 h-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>
+        </div>
+        <p class="text-sm font-semibold text-slate-500">Kết quả sẽ hiển thị ở đây</p>
+        <p class="text-xs text-slate-400 mt-1">Nhập văn bản và nhấn Phân tích</p>
       </div>
 
       <!-- Loading -->
-      <div id="result-loading" class="hidden bg-white rounded-2xl p-6 border border-gray-100 text-center">
-        <div class="spinner mb-3 mx-auto"></div>
-        <p class="text-sm text-gray-500" id="loading-text">Đang phân tích...</p>
+      <div id="result-loading" class="hidden card flex items-center justify-center gap-3 py-8">
+        <div class="spinner"></div>
+        <span class="text-sm text-slate-500" id="loading-text">Đang phân tích...</span>
       </div>
 
       <!-- Result card -->
-      <div id="result-card" class="hidden bg-white rounded-2xl p-5 border shadow-sm pred-card">
-        <div class="flex items-center gap-3 mb-4">
-          <span id="result-emoji" class="text-4xl"></span>
-          <div>
-            <div id="result-label-vi" class="text-xl font-black text-gray-800"></div>
-            <code id="result-label-en" class="text-xs text-gray-400"></code>
+      <div id="result-card" class="hidden card result-card">
+        <div class="flex items-start justify-between gap-3 mb-4">
+          <div class="flex items-center gap-3">
+            <span id="result-emoji" class="text-3xl leading-none"></span>
+            <div>
+              <div id="result-label-vi" class="text-xl font-bold text-slate-900 leading-none"></div>
+              <code id="result-label-en" class="text-xs text-slate-400 mono mt-1 block"></code>
+            </div>
           </div>
-          <div class="ml-auto text-right">
-            <div id="result-conf" class="text-2xl font-black"></div>
-            <div class="text-xs text-gray-400">tin cậy</div>
+          <div class="text-right flex-shrink-0">
+            <div id="result-conf" class="text-2xl font-bold leading-none"></div>
+            <div class="text-xs text-slate-400 mt-1">confidence</div>
           </div>
         </div>
-
-        <div class="space-y-2" id="conf-bars"></div>
+        <div class="space-y-2.5" id="conf-bars"></div>
       </div>
 
       <!-- Error -->
-      <div id="result-error" class="hidden bg-red-50 rounded-2xl p-4 border border-red-100">
-        <p class="text-sm text-red-700" id="error-msg"></p>
+      <div id="result-error" class="hidden card border-red-200">
+        <div class="flex items-start gap-2">
+          <svg class="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
+          <p class="text-sm text-red-600" id="error-msg"></p>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- LIME section -->
-  <div id="lime-section" class="hidden mt-6 bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-    <h2 class="text-base font-bold text-blue-700 border-l-4 border-blue-600 pl-3 mb-1">Giải thích LIME</h2>
-    <p class="text-xs text-gray-400 mb-4">Token màu xanh = ủng hộ nhãn dự đoán · Token màu đỏ = phản đối</p>
+  <!-- LIME explanation -->
+  <div id="lime-section" class="hidden card">
+    <div class="flex items-center justify-between mb-1">
+      <div class="section-title" style="margin-bottom:0">LIME Token Attribution</div>
+      <div class="flex items-center gap-3 text-xs text-slate-400">
+        <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded bg-emerald-200"></span> Ủng hộ nhãn</span>
+        <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded bg-red-200"></span> Phản đối nhãn</span>
+      </div>
+    </div>
+    <p class="text-xs text-slate-400 mb-4">Độ đậm màu tỷ lệ thuận với mức độ đóng góp của token</p>
 
-    <div id="lime-loading" class="text-center py-6">
-      <div class="spinner mb-2 mx-auto"></div>
-      <p class="text-sm text-gray-400">Đang tính LIME attribution...</p>
+    <div id="lime-loading" class="flex items-center gap-3 py-4">
+      <div class="spinner"></div>
+      <span class="text-sm text-slate-400">Đang tính LIME attribution (~150 samples)...</span>
     </div>
 
     <div id="lime-content" class="hidden">
-      <div id="lime-html" class="bg-gray-50 rounded-xl px-4 py-3 mb-4"></div>
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm" id="lime-table">
+      <div id="lime-display" class="bg-slate-50 rounded-lg p-4 mb-4 leading-loose text-sm"></div>
+      <div class="overflow-x-auto -mx-5 px-5">
+        <table class="data-table" id="lime-table">
           <thead>
-            <tr class="bg-gray-50 border-b">
-              <th class="text-left px-3 py-2 font-semibold text-gray-600">Token</th>
-              <th class="text-right px-3 py-2 font-semibold text-gray-600">LIME Weight</th>
-              <th class="text-left px-3 py-2 font-semibold text-gray-600">Hướng</th>
+            <tr>
+              <th>Token</th>
+              <th class="text-right">LIME Weight</th>
+              <th>Ảnh hưởng</th>
             </tr>
           </thead>
           <tbody id="lime-tbody"></tbody>
@@ -396,260 +492,425 @@
       </div>
     </div>
   </div>
+</div><!-- /tab-demo -->
 
-</div><!-- end tab-demo -->
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- TAB: BATCH                                    -->
+<!-- ══════════════════════════════════════════════ -->
+<div id="tab-batch" class="tab-pane space-y-5">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+    <div class="card">
+      <div class="section-title">Nhập văn bản hàng loạt</div>
+      <p class="text-xs text-slate-500 mb-3">Mỗi dòng là một văn bản. Tối đa 64 dòng.</p>
+
+      <textarea id="batch-input" rows="14"
+        class="form-input mono text-xs resize-none mb-3"
+        placeholder="Hôm nay vui quá, đi chơi cùng bạn bè thật tuyệt!
+Buồn ghê, chia tay rồi...
+Kẹt xe 2 tiếng, tức điên người lên.
+Thi xong rồi, nhẹ người hẳn!
+Ủa sao lại thế này, bất ngờ quá luôn."></textarea>
+
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-xs text-slate-400" id="batch-count">0 dòng</span>
+        <button onclick="clearBatch()" class="btn-secondary text-xs">Xóa</button>
+      </div>
+
+      <button onclick="runBatch()" id="batch-btn" class="btn-primary flex items-center justify-center gap-2">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z"/></svg>
+        Phân tích hàng loạt
+      </button>
+    </div>
+
+    <div class="lg:col-span-2">
+      <!-- Placeholder -->
+      <div id="batch-placeholder" class="card flex flex-col items-center justify-center py-16 text-center h-full">
+        <div class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
+          <svg class="w-6 h-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM3.75 12h.007v.008H3.75V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-.375 5.25h.007v.008H3.75v-.008zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/></svg>
+        </div>
+        <p class="text-sm font-semibold text-slate-500">Kết quả batch</p>
+        <p class="text-xs text-slate-400 mt-1">Nhập nhiều văn bản và nhấn Phân tích</p>
+      </div>
+
+      <!-- Loading -->
+      <div id="batch-loading" class="hidden card flex items-center justify-center gap-3 py-12">
+        <div class="spinner"></div>
+        <span class="text-sm text-slate-500" id="batch-loading-text">Đang xử lý...</span>
+      </div>
+
+      <!-- Results -->
+      <div id="batch-results" class="hidden card">
+        <div class="flex items-center justify-between mb-3">
+          <div class="section-title" style="margin-bottom:0">Kết quả phân tích</div>
+          <div class="flex items-center gap-3">
+            <span class="text-xs text-slate-400" id="batch-result-count"></span>
+            <button onclick="exportBatchCSV()" class="btn-secondary flex items-center gap-1.5 text-xs">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+              Export CSV
+            </button>
+          </div>
+        </div>
+
+        <!-- Emotion summary bar -->
+        <div id="batch-summary" class="flex flex-wrap gap-2 mb-4 p-3 bg-slate-50 rounded-lg"></div>
+
+        <div class="overflow-x-auto -mx-5 px-5">
+          <table class="data-table" id="batch-table">
+            <thead>
+              <tr>
+                <th style="width:40px">#</th>
+                <th>Văn bản</th>
+                <th class="text-center">Cảm xúc</th>
+                <th class="text-right">Confidence</th>
+              </tr>
+            </thead>
+            <tbody id="batch-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Error -->
+      <div id="batch-error" class="hidden card border-red-200">
+        <p class="text-sm text-red-600" id="batch-error-msg"></p>
+      </div>
+    </div>
+  </div>
+</div><!-- /tab-batch -->
 
 
-<!-- ═══════════════════════ TAB: KẾT QUẢ ═══════════════════════ -->
-<div id="tab-results" class="tab-pane">
+<!-- ══════════════════════════════════════════════ -->
+<!-- TAB: KẾT QUẢ NGHIÊN CỨU                      -->
+<!-- ══════════════════════════════════════════════ -->
+<div id="tab-results" class="tab-pane space-y-5">
+
   <!-- Key metrics -->
-  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-    <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center border-t-4 border-t-blue-600">
-      <div class="text-3xl font-black text-blue-600">0.6877</div>
-      <div class="text-xs text-gray-400 mt-1 uppercase tracking-wider font-semibold">F1-Macro</div>
-      <div class="text-xs text-green-600 font-semibold mt-0.5">+0.0641 vs baseline</div>
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+    <div class="card border-t-2 border-t-indigo-500">
+      <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">F1-Macro</div>
+      <div class="text-3xl font-bold text-slate-900 mono">0.6877</div>
+      <div class="text-xs text-emerald-600 font-semibold mt-1">+0.064 vs baseline</div>
     </div>
-    <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center border-t-4 border-t-green-600">
-      <div class="text-3xl font-black text-green-600">0.7020</div>
-      <div class="text-xs text-gray-400 mt-1 uppercase tracking-wider font-semibold">Accuracy</div>
+    <div class="card border-t-2 border-t-emerald-500">
+      <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Accuracy</div>
+      <div class="text-3xl font-bold text-slate-900 mono">0.7020</div>
     </div>
-    <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center border-t-4 border-t-orange-500">
-      <div class="text-3xl font-black text-orange-500">0.7029</div>
-      <div class="text-xs text-gray-400 mt-1 uppercase tracking-wider font-semibold">F1-Weighted</div>
+    <div class="card border-t-2 border-t-orange-400">
+      <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">F1-Weighted</div>
+      <div class="text-3xl font-bold text-slate-900 mono">0.7029</div>
     </div>
-    <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center border-t-4 border-t-purple-600">
-      <div class="text-3xl font-black text-purple-600">0.6874</div>
-      <div class="text-xs text-gray-400 mt-1 uppercase tracking-wider font-semibold">Recall-Macro</div>
+    <div class="card border-t-2 border-t-violet-500">
+      <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Recall-Macro</div>
+      <div class="text-3xl font-bold text-slate-900 mono">0.6874</div>
     </div>
   </div>
 
-  <!-- Per-class table -->
-  <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6">
-    <h2 class="text-base font-bold text-blue-700 border-l-4 border-blue-600 pl-3 mb-4">Kết quả theo từng cảm xúc</h2>
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
+  <!-- Per-class -->
+  <div class="card">
+    <div class="section-title">Kết quả theo từng lớp cảm xúc</div>
+    <div class="overflow-x-auto -mx-5 px-5">
+      <table class="data-table">
         <thead>
-          <tr class="bg-gray-50 border-b border-gray-200">
-            <th class="text-left px-4 py-3 font-semibold text-gray-700">Cảm xúc</th>
-            <th class="text-right px-4 py-3 font-semibold text-gray-700">F1</th>
-            <th class="text-right px-4 py-3 font-semibold text-gray-700">Precision</th>
-            <th class="text-right px-4 py-3 font-semibold text-gray-700">Recall</th>
-            <th class="text-right px-4 py-3 font-semibold text-gray-700">Support</th>
+          <tr>
+            <th>Cảm xúc</th>
+            <th class="text-right">F1</th>
+            <th class="text-right">Precision</th>
+            <th class="text-right">Recall</th>
+            <th class="text-right">Support</th>
+            <th style="min-width:120px">F1 Bar</th>
           </tr>
         </thead>
         <tbody>
-          <tr class="border-b hover:bg-gray-50"><td class="px-4 py-2.5">😊 Vui vẻ</td><td class="px-4 py-2.5 text-right font-mono font-bold text-green-700">0.7893</td><td class="px-4 py-2.5 text-right font-mono">0.8480</td><td class="px-4 py-2.5 text-right font-mono">0.7381</td><td class="px-4 py-2.5 text-right text-gray-500">378</td></tr>
-          <tr class="border-b hover:bg-gray-50"><td class="px-4 py-2.5">😢 Buồn bã</td><td class="px-4 py-2.5 text-right font-mono font-bold">0.7431</td><td class="px-4 py-2.5 text-right font-mono">0.7602</td><td class="px-4 py-2.5 text-right font-mono">0.7268</td><td class="px-4 py-2.5 text-right text-gray-500">205</td></tr>
-          <tr class="border-b hover:bg-gray-50"><td class="px-4 py-2.5">😠 Tức giận</td><td class="px-4 py-2.5 text-right font-mono text-red-600">0.5413</td><td class="px-4 py-2.5 text-right font-mono">0.5364</td><td class="px-4 py-2.5 text-right font-mono">0.5463</td><td class="px-4 py-2.5 text-right text-gray-500">108</td></tr>
-          <tr class="border-b hover:bg-gray-50"><td class="px-4 py-2.5">😨 Sợ hãi</td><td class="px-4 py-2.5 text-right font-mono font-bold">0.7205</td><td class="px-4 py-2.5 text-right font-mono">0.8169</td><td class="px-4 py-2.5 text-right font-mono">0.6444</td><td class="px-4 py-2.5 text-right text-gray-500">90</td></tr>
-          <tr class="border-b hover:bg-gray-50"><td class="px-4 py-2.5">🤢 Ghê tởm</td><td class="px-4 py-2.5 text-right font-mono">0.5871</td><td class="px-4 py-2.5 text-right font-mono">0.5319</td><td class="px-4 py-2.5 text-right font-mono">0.6550</td><td class="px-4 py-2.5 text-right text-gray-500">229</td></tr>
-          <tr class="border-b hover:bg-gray-50 bg-green-50"><td class="px-4 py-2.5">😲 Ngạc nhiên</td><td class="px-4 py-2.5 text-right font-mono font-bold text-green-700">0.8243</td><td class="px-4 py-2.5 text-right font-mono">0.7409</td><td class="px-4 py-2.5 text-right font-mono">0.9289</td><td class="px-4 py-2.5 text-right text-gray-500">197</td></tr>
-          <tr class="hover:bg-gray-50"><td class="px-4 py-2.5">😐 Trung tính</td><td class="px-4 py-2.5 text-right font-mono">0.6081</td><td class="px-4 py-2.5 text-right font-mono">0.6490</td><td class="px-4 py-2.5 text-right font-mono">0.5720</td><td class="px-4 py-2.5 text-right text-gray-500">236</td></tr>
+          <tr><td>😊 Vui vẻ <span class="mono text-xs text-slate-400">joy</span></td><td class="text-right mono font-semibold text-emerald-700">0.7893</td><td class="text-right mono">0.8480</td><td class="text-right mono">0.7381</td><td class="text-right text-slate-500">378</td><td><div class="prob-track"><div class="prob-fill bg-yellow-400" style="width:78.93%"></div></div></td></tr>
+          <tr><td>😢 Buồn bã <span class="mono text-xs text-slate-400">sadness</span></td><td class="text-right mono font-semibold">0.7431</td><td class="text-right mono">0.7602</td><td class="text-right mono">0.7268</td><td class="text-right text-slate-500">205</td><td><div class="prob-track"><div class="prob-fill bg-blue-400" style="width:74.31%"></div></div></td></tr>
+          <tr><td>😠 Tức giận <span class="mono text-xs text-slate-400">anger</span></td><td class="text-right mono font-semibold text-red-500">0.5413</td><td class="text-right mono">0.5364</td><td class="text-right mono">0.5463</td><td class="text-right text-slate-500">108</td><td><div class="prob-track"><div class="prob-fill bg-red-400" style="width:54.13%"></div></div></td></tr>
+          <tr><td>😨 Sợ hãi <span class="mono text-xs text-slate-400">fear</span></td><td class="text-right mono font-semibold">0.7205</td><td class="text-right mono">0.8169</td><td class="text-right mono">0.6444</td><td class="text-right text-slate-500">90</td><td><div class="prob-track"><div class="prob-fill bg-violet-400" style="width:72.05%"></div></div></td></tr>
+          <tr><td>🤢 Ghê tởm <span class="mono text-xs text-slate-400">disgust</span></td><td class="text-right mono font-semibold">0.5871</td><td class="text-right mono">0.5319</td><td class="text-right mono">0.6550</td><td class="text-right text-slate-500">229</td><td><div class="prob-track"><div class="prob-fill bg-emerald-400" style="width:58.71%"></div></div></td></tr>
+          <tr class="bg-emerald-50/50"><td>😲 Ngạc nhiên <span class="mono text-xs text-slate-400">surprise</span></td><td class="text-right mono font-bold text-emerald-700">0.8243</td><td class="text-right mono">0.7409</td><td class="text-right mono">0.9289</td><td class="text-right text-slate-500">197</td><td><div class="prob-track"><div class="prob-fill bg-orange-400" style="width:82.43%"></div></div></td></tr>
+          <tr><td>😐 Trung tính <span class="mono text-xs text-slate-400">neutral</span></td><td class="text-right mono font-semibold">0.6081</td><td class="text-right mono">0.6490</td><td class="text-right mono">0.5720</td><td class="text-right text-slate-500">236</td><td><div class="prob-track"><div class="prob-fill bg-slate-400" style="width:60.81%"></div></div></td></tr>
         </tbody>
       </table>
     </div>
+    <p class="text-xs text-slate-400 mt-3">Ngạc nhiên đạt F1 cao nhất (0.8243) — Recall 0.929 xuất sắc. Tức giận khó nhất (0.5413) do ít sample và dễ nhầm với Ghê tởm.</p>
   </div>
 
-  <!-- Figures grid -->
-  <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6">
-    <h2 class="text-base font-bold text-blue-700 border-l-4 border-blue-600 pl-3 mb-4">Biểu đồ phân tích</h2>
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-      <div class="fig-card rounded-xl overflow-hidden border border-gray-100 shadow-sm cursor-pointer" onclick="openFig('/figures/learning_curves.png')">
-        <img src="/figures/learning_curves.png" alt="Learning curves" class="w-full" onerror="this.parentElement.classList.add('hidden')">
-        <div class="px-3 py-2 text-xs font-medium text-gray-600 bg-gray-50">Learning Curves (Train vs Val Loss &amp; F1)</div>
-      </div>
-      <div class="fig-card rounded-xl overflow-hidden border border-gray-100 shadow-sm cursor-pointer" onclick="openFig('/figures/confusion_matrix.png')">
-        <img src="/figures/confusion_matrix.png" alt="Confusion Matrix" class="w-full" onerror="this.parentElement.classList.add('hidden')">
-        <div class="px-3 py-2 text-xs font-medium text-gray-600 bg-gray-50">Confusion Matrix — test set 9 616 mẫu</div>
-      </div>
-      <div class="fig-card rounded-xl overflow-hidden border border-gray-100 shadow-sm cursor-pointer" onclick="openFig('/figures/per_class_metrics.png')">
-        <img src="/figures/per_class_metrics.png" alt="Per class" class="w-full" onerror="this.parentElement.classList.add('hidden')">
-        <div class="px-3 py-2 text-xs font-medium text-gray-600 bg-gray-50">F1 / Precision / Recall theo từng lớp</div>
-      </div>
-      <div class="fig-card rounded-xl overflow-hidden border border-gray-100 shadow-sm cursor-pointer" onclick="openFig('/figures/error_analysis.png')">
-        <img src="/figures/error_analysis.png" alt="Error analysis" class="w-full" onerror="this.parentElement.classList.add('hidden')">
-        <div class="px-3 py-2 text-xs font-medium text-gray-600 bg-gray-50">Phân tích lỗi — mẫu phân loại sai</div>
-      </div>
+  <!-- Charts -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div class="fig-card" onclick="openFig('/figures/learning_curves.png')">
+      <img src="/figures/learning_curves.png" alt="Learning curves" onerror="this.closest('.fig-card').style.display='none'">
+      <div class="fig-cap">Learning Curves — Train vs Val Loss &amp; F1</div>
+    </div>
+    <div class="fig-card" onclick="openFig('/figures/confusion_matrix.png')">
+      <img src="/figures/confusion_matrix.png" alt="Confusion Matrix" onerror="this.closest('.fig-card').style.display='none'">
+      <div class="fig-cap">Confusion Matrix — test set 9,616 mẫu</div>
+    </div>
+    <div class="fig-card" onclick="openFig('/figures/per_class_metrics.png')">
+      <img src="/figures/per_class_metrics.png" alt="Per class metrics" onerror="this.closest('.fig-card').style.display='none'">
+      <div class="fig-cap">F1 / Precision / Recall theo từng lớp</div>
+    </div>
+    <div class="fig-card" onclick="openFig('/figures/error_analysis.png')">
+      <img src="/figures/error_analysis.png" alt="Error analysis" onerror="this.closest('.fig-card').style.display='none'">
+      <div class="fig-cap">Error Analysis — mẫu phân loại sai</div>
     </div>
   </div>
 
   <!-- Ablation chart -->
-  <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6">
-    <h2 class="text-base font-bold text-blue-700 border-l-4 border-blue-600 pl-3 mb-4">Ablation Study Chart</h2>
-    <div class="fig-card rounded-xl overflow-hidden cursor-pointer" onclick="openFig('/figures/ablation_with_phobert.png')">
-      <img src="/figures/ablation_with_phobert.png" alt="Ablation" class="w-full max-w-2xl mx-auto block" onerror="this.src='/figures/ablation_results.png'">
+  <div class="card">
+    <div class="section-title">Ablation Study — biểu đồ so sánh</div>
+    <div class="fig-card" onclick="openFig('/figures/ablation_with_phobert.png')">
+      <img src="/figures/ablation_with_phobert.png" alt="Ablation study" onerror="this.src='/figures/ablation_results.png'">
+      <div class="fig-cap">So sánh F1-Macro và Accuracy qua 4 cấu hình thí nghiệm</div>
     </div>
-    <div class="mt-4 bg-green-50 border-l-4 border-green-400 rounded-r-lg px-4 py-3 text-sm text-green-800">
-      <strong>Kết luận:</strong> PhoBERT-v2 đạt <strong>F1=0.7186</strong>, cao hơn XLM-R Exp2 <strong>+6.37%</strong>.
-      Teencode normalization đóng góp <strong>+3.1 F1-Macro</strong>. Full fusion (tabular) tăng accuracy nhưng
-      không cải thiện F1-Macro trong thiết lập này.
+    <div class="mt-4 bg-emerald-50 border border-emerald-100 rounded-lg p-4 text-sm text-slate-700">
+      <span class="font-semibold text-emerald-700">Kết luận:</span> PhoBERT-v2 (Exp4) đạt F1-Macro = <span class="font-bold mono">0.7186</span>, cao hơn XLM-R+Teencode (Exp2) <span class="font-bold text-emerald-600">+6.38%</span>.
+      Teencode normalization đóng góp <span class="font-bold">+3.1 F1</span>. Full fusion (Exp3) tăng Accuracy nhưng không cải thiện F1-Macro trong thiết lập này — cho thấy tabular features cần cân nhắc thêm khi kết hợp với backbone mạnh.
     </div>
   </div>
-</div><!-- end tab-results -->
+</div><!-- /tab-results -->
 
 
-<!-- ═══════════════════════ TAB: PHƯƠNG PHÁP ═══════════════════════ -->
-<div id="tab-method" class="tab-pane">
+<!-- ══════════════════════════════════════════════ -->
+<!-- TAB: PHƯƠNG PHÁP                              -->
+<!-- ══════════════════════════════════════════════ -->
+<div id="tab-method" class="tab-pane space-y-5">
 
   <!-- Dataset -->
-  <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6">
-    <h2 class="text-base font-bold text-blue-700 border-l-4 border-blue-600 pl-3 mb-4">Dataset</h2>
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead><tr class="bg-gray-50 border-b">
-          <th class="text-left px-4 py-3 font-semibold text-gray-700">Nguồn</th>
-          <th class="text-right px-4 py-3 font-semibold text-gray-700">Mẫu</th>
-          <th class="text-left px-4 py-3 font-semibold text-gray-700">Mô tả</th>
-        </tr></thead>
+  <div class="card">
+    <div class="section-title">Tập dữ liệu</div>
+    <div class="overflow-x-auto -mx-5 px-5">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Nguồn</th>
+            <th class="text-right">Mẫu</th>
+            <th>Mô tả</th>
+          </tr>
+        </thead>
         <tbody>
-          <tr class="border-b hover:bg-gray-50"><td class="px-4 py-2.5 font-mono text-xs">crawled_emotions.xlsx</td><td class="px-4 py-2.5 text-right font-semibold">2 034</td><td class="px-4 py-2.5 text-gray-600">Facebook posts tự crawl — 7 cảm xúc, annotated thủ công</td></tr>
-          <tr class="border-b hover:bg-gray-50"><td class="px-4 py-2.5 font-mono text-xs">UIT-VSMEC.csv</td><td class="px-4 py-2.5 text-right font-semibold">6 927</td><td class="px-4 py-2.5 text-gray-600">Facebook comments công khai (UIT-NLP benchmark)</td></tr>
-          <tr class="border-b hover:bg-gray-50"><td class="px-4 py-2.5 font-mono text-xs">pseudo_labeled_apify.csv</td><td class="px-4 py-2.5 text-right font-semibold">655</td><td class="px-4 py-2.5 text-gray-600">990 posts Apify → zero-shot NLI (mDeBERTa) confidence ≥ 0.35</td></tr>
-          <tr class="bg-blue-50 font-bold"><td class="px-4 py-2.5 text-blue-800">Tổng train set</td><td class="px-4 py-2.5 text-right text-blue-800">~6 700</td><td class="px-4 py-2.5 text-blue-700">Sau stratified split 70/15/15</td></tr>
+          <tr>
+            <td class="mono text-xs">crawled_emotions.xlsx</td>
+            <td class="text-right font-semibold">2,034</td>
+            <td class="text-slate-600">Facebook posts tự crawl — 7 cảm xúc, annotated thủ công</td>
+          </tr>
+          <tr>
+            <td class="mono text-xs">UIT-VSMEC.csv</td>
+            <td class="text-right font-semibold">6,927</td>
+            <td class="text-slate-600">Facebook comments công khai — UIT-NLP benchmark</td>
+          </tr>
+          <tr>
+            <td class="mono text-xs">pseudo_labeled_apify.csv</td>
+            <td class="text-right font-semibold">655</td>
+            <td class="text-slate-600">990 posts Apify → zero-shot NLI (mDeBERTa) confidence ≥ 0.35</td>
+          </tr>
+          <tr class="bg-indigo-50/50">
+            <td class="font-bold text-indigo-700">Train set (sau split)</td>
+            <td class="text-right font-bold text-indigo-700">~6,700</td>
+            <td class="text-indigo-700">Stratified split 70/15/15 — train/val/test</td>
+          </tr>
         </tbody>
       </table>
     </div>
   </div>
 
   <!-- Pipeline -->
-  <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6">
-    <h2 class="text-base font-bold text-blue-700 border-l-4 border-blue-600 pl-3 mb-4">Pipeline 7 bước</h2>
-    <div class="space-y-3">
-      <div class="flex gap-4 items-start p-4 bg-gray-50 rounded-xl">
+  <div class="card">
+    <div class="section-title">Pipeline 7 bước</div>
+    <div class="space-y-2">
+      <div class="flex gap-3 items-start p-3 bg-slate-50 rounded-lg">
         <div class="step-num">1</div>
-        <div><div class="font-semibold text-gray-800 text-sm">Thu thập dữ liệu</div><div class="text-xs text-gray-500 mt-0.5">Web crawling Facebook + UIT-VSMEC + pseudo-labeling bằng mDeBERTa zero-shot NLI</div></div>
+        <div><div class="text-sm font-semibold text-slate-800">Thu thập dữ liệu</div><div class="text-xs text-slate-500 mt-0.5">Web crawling Facebook + UIT-VSMEC + pseudo-labeling bằng mDeBERTa zero-shot NLI (confidence ≥ 0.35)</div></div>
       </div>
-      <div class="flex gap-4 items-start p-4 bg-gray-50 rounded-xl">
+      <div class="flex gap-3 items-start p-3 bg-slate-50 rounded-lg">
         <div class="step-num">2</div>
-        <div><div class="font-semibold text-gray-800 text-sm">Tiền xử lý văn bản</div><div class="text-xs text-gray-500 mt-0.5">Teencode normalization: 170+ từ lóng + 70 emoji token → chuẩn hóa tiếng Việt mạng xã hội</div></div>
+        <div><div class="text-sm font-semibold text-slate-800">Tiền xử lý văn bản — Teencode Normalizer</div><div class="text-xs text-slate-500 mt-0.5">170+ từ lóng + 70 emoji token → chuẩn hóa tiếng Việt mạng xã hội trước khi tokenize</div></div>
       </div>
-      <div class="flex gap-4 items-start p-4 bg-gray-50 rounded-xl">
+      <div class="flex gap-3 items-start p-3 bg-slate-50 rounded-lg">
         <div class="step-num">3</div>
-        <div><div class="font-semibold text-gray-800 text-sm">Feature engineering tabular</div><div class="text-xs text-gray-500 mt-0.5">10 numerical (text_length, n_words, likes…) + 4 categorical (has_emoji, has_hashtag…)</div></div>
+        <div><div class="text-sm font-semibold text-slate-800">Feature Engineering — Tabular</div><div class="text-xs text-slate-500 mt-0.5">10 numerical (text_length, n_words, likes, comments, shares…) + 4 categorical (has_emoji, has_hashtag, has_url, platform)</div></div>
       </div>
-      <div class="flex gap-4 items-start p-4 bg-gray-50 rounded-xl">
+      <div class="flex gap-3 items-start p-3 bg-slate-50 rounded-lg">
         <div class="step-num">4</div>
-        <div><div class="font-semibold text-gray-800 text-sm">Training Late Fusion</div><div class="text-xs text-gray-500 mt-0.5">XLM-R + FT-Transformer + MLP fusion · AdamW · AMP · early stopping · F1-Macro monitor</div></div>
+        <div><div class="text-sm font-semibold text-slate-800">Training Late Fusion Model</div><div class="text-xs text-slate-500 mt-0.5">XLM-R + FT-Transformer + MLP fusion · AdamW + linear warmup · AMP (fp16) · Early stopping on F1-Macro</div></div>
       </div>
-      <div class="flex gap-4 items-start p-4 bg-gray-50 rounded-xl">
+      <div class="flex gap-3 items-start p-3 bg-slate-50 rounded-lg">
         <div class="step-num">5</div>
-        <div><div class="font-semibold text-gray-800 text-sm">Evaluation</div><div class="text-xs text-gray-500 mt-0.5">F1-Macro, Accuracy, Precision/Recall per-class, Confusion Matrix trên test set 9 616 mẫu</div></div>
+        <div><div class="text-sm font-semibold text-slate-800">Evaluation</div><div class="text-xs text-slate-500 mt-0.5">F1-Macro (primary), Accuracy, Precision/Recall per-class, Confusion Matrix — test set 9,616 mẫu</div></div>
       </div>
-      <div class="flex gap-4 items-start p-4 bg-gray-50 rounded-xl">
+      <div class="flex gap-3 items-start p-3 bg-slate-50 rounded-lg">
         <div class="step-num">6</div>
-        <div><div class="font-semibold text-gray-800 text-sm">Explainability</div><div class="text-xs text-gray-500 mt-0.5">LIME: tô màu token đóng góp · SHAP KernelExplainer: feature importance tabular branch</div></div>
+        <div><div class="text-sm font-semibold text-slate-800">Explainability — LIME &amp; SHAP</div><div class="text-xs text-slate-500 mt-0.5">LIME: token-level attribution cho text branch · SHAP KernelExplainer: feature importance cho tabular branch</div></div>
       </div>
-      <div class="flex gap-4 items-start p-4 bg-gray-50 rounded-xl">
+      <div class="flex gap-3 items-start p-3 bg-slate-50 rounded-lg">
         <div class="step-num">7</div>
-        <div><div class="font-semibold text-gray-800 text-sm">Ablation Study</div><div class="text-xs text-gray-500 mt-0.5">4 thí nghiệm: Exp1 → Exp2 (+Teencode) → Exp3 (+Tabular) → Exp4 (PhoBERT-v2 backbone)</div></div>
+        <div><div class="text-sm font-semibold text-slate-800">Ablation Study</div><div class="text-xs text-slate-500 mt-0.5">4 cấu hình: Baseline → +Teencode → +Tabular → PhoBERT-v2 backbone — giữ nguyên toàn bộ hyperparameters</div></div>
       </div>
     </div>
   </div>
 
-  <!-- Emotion taxonomy -->
-  <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6">
-    <h2 class="text-base font-bold text-blue-700 border-l-4 border-blue-600 pl-3 mb-4">Phân loại cảm xúc — Mô hình Ekman 7 lớp</h2>
-    <div class="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-      <div class="text-center bg-yellow-50 rounded-xl py-3 border-t-4 border-yellow-400"><div class="text-3xl">😊</div><div class="text-xs font-bold mt-1 text-gray-700">Vui vẻ</div><div class="text-xs text-gray-400 italic">joy</div></div>
-      <div class="text-center bg-blue-50 rounded-xl py-3 border-t-4 border-blue-400"><div class="text-3xl">😢</div><div class="text-xs font-bold mt-1 text-gray-700">Buồn bã</div><div class="text-xs text-gray-400 italic">sadness</div></div>
-      <div class="text-center bg-red-50 rounded-xl py-3 border-t-4 border-red-400"><div class="text-3xl">😠</div><div class="text-xs font-bold mt-1 text-gray-700">Tức giận</div><div class="text-xs text-gray-400 italic">anger</div></div>
-      <div class="text-center bg-purple-50 rounded-xl py-3 border-t-4 border-purple-400"><div class="text-3xl">😨</div><div class="text-xs font-bold mt-1 text-gray-700">Sợ hãi</div><div class="text-xs text-gray-400 italic">fear</div></div>
-      <div class="text-center bg-green-50 rounded-xl py-3 border-t-4 border-green-400"><div class="text-3xl">🤢</div><div class="text-xs font-bold mt-1 text-gray-700">Ghê tởm</div><div class="text-xs text-gray-400 italic">disgust</div></div>
-      <div class="text-center bg-orange-50 rounded-xl py-3 border-t-4 border-orange-400"><div class="text-3xl">😲</div><div class="text-xs font-bold mt-1 text-gray-700">Ngạc nhiên</div><div class="text-xs text-gray-400 italic">surprise</div></div>
-      <div class="text-center bg-gray-50 rounded-xl py-3 border-t-4 border-gray-400"><div class="text-3xl">😐</div><div class="text-xs font-bold mt-1 text-gray-700">Trung tính</div><div class="text-xs text-gray-400 italic">neutral</div></div>
-    </div>
-  </div>
+  <!-- Emotion classes + Teencode + Tech stack -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
-  <!-- Teencode examples + Tech stack -->
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-    <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-      <h2 class="text-base font-bold text-blue-700 border-l-4 border-blue-600 pl-3 mb-4">Teencode Normalizer — Ví dụ</h2>
-      <table class="w-full text-sm">
-        <thead><tr class="bg-gray-50 border-b"><th class="text-left px-3 py-2 font-semibold text-gray-600">Input (mạng xã hội)</th><th class="text-left px-3 py-2 font-semibold text-gray-600">Output (chuẩn hóa)</th></tr></thead>
-        <tbody>
-          <tr class="border-b"><td class="px-3 py-1.5 font-mono text-gray-700">ko / k / hok</td><td class="px-3 py-1.5 text-gray-600">không</td></tr>
-          <tr class="border-b"><td class="px-3 py-1.5 font-mono text-gray-700">đc / đk</td><td class="px-3 py-1.5 text-gray-600">được</td></tr>
-          <tr class="border-b"><td class="px-3 py-1.5 font-mono text-gray-700">mk / mik</td><td class="px-3 py-1.5 text-gray-600">mình</td></tr>
-          <tr class="border-b"><td class="px-3 py-1.5 font-mono text-gray-700">iu / iu thik</td><td class="px-3 py-1.5 text-gray-600">yêu / yêu thích</td></tr>
-          <tr class="border-b"><td class="px-3 py-1.5 font-mono text-gray-700">vui lắm lun</td><td class="px-3 py-1.5 text-gray-600">vui lắm luôn</td></tr>
-          <tr class="border-b"><td class="px-3 py-1.5 font-mono text-gray-700">😊</td><td class="px-3 py-1.5 text-gray-600"><code class="bg-gray-100 px-1 rounded">[SMILE]</code></td></tr>
-          <tr class="border-b"><td class="px-3 py-1.5 font-mono text-gray-700">🔥</td><td class="px-3 py-1.5 text-gray-600"><code class="bg-gray-100 px-1 rounded">[FIRE]</code></td></tr>
-          <tr><td class="px-3 py-1.5 font-mono text-gray-700">💯</td><td class="px-3 py-1.5 text-gray-600"><code class="bg-gray-100 px-1 rounded">[HUNDRED]</code></td></tr>
-        </tbody>
-      </table>
-      <div class="mt-3 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg px-3 py-2 text-xs text-blue-800">
-        170+ từ lóng và 70 emoji token được chuẩn hóa trước khi đưa vào XLM-RoBERTa
+    <div class="card">
+      <div class="section-title">Phân loại cảm xúc Ekman — 7 lớp</div>
+      <div class="grid grid-cols-4 sm:grid-cols-7 gap-2">
+        <div class="text-center py-3 bg-yellow-50 border border-yellow-100 rounded-lg">
+          <div class="text-2xl">😊</div>
+          <div class="text-xs font-semibold text-slate-700 mt-1">Vui vẻ</div>
+          <div class="mono text-xs text-slate-400">joy</div>
+        </div>
+        <div class="text-center py-3 bg-blue-50 border border-blue-100 rounded-lg">
+          <div class="text-2xl">😢</div>
+          <div class="text-xs font-semibold text-slate-700 mt-1">Buồn bã</div>
+          <div class="mono text-xs text-slate-400">sadness</div>
+        </div>
+        <div class="text-center py-3 bg-red-50 border border-red-100 rounded-lg">
+          <div class="text-2xl">😠</div>
+          <div class="text-xs font-semibold text-slate-700 mt-1">Tức giận</div>
+          <div class="mono text-xs text-slate-400">anger</div>
+        </div>
+        <div class="text-center py-3 bg-violet-50 border border-violet-100 rounded-lg">
+          <div class="text-2xl">😨</div>
+          <div class="text-xs font-semibold text-slate-700 mt-1">Sợ hãi</div>
+          <div class="mono text-xs text-slate-400">fear</div>
+        </div>
+        <div class="text-center py-3 bg-emerald-50 border border-emerald-100 rounded-lg">
+          <div class="text-2xl">🤢</div>
+          <div class="text-xs font-semibold text-slate-700 mt-1">Ghê tởm</div>
+          <div class="mono text-xs text-slate-400">disgust</div>
+        </div>
+        <div class="text-center py-3 bg-orange-50 border border-orange-100 rounded-lg">
+          <div class="text-2xl">😲</div>
+          <div class="text-xs font-semibold text-slate-700 mt-1">Ngạc nhiên</div>
+          <div class="mono text-xs text-slate-400">surprise</div>
+        </div>
+        <div class="text-center py-3 bg-slate-50 border border-slate-100 rounded-lg">
+          <div class="text-2xl">😐</div>
+          <div class="text-xs font-semibold text-slate-700 mt-1">Trung tính</div>
+          <div class="mono text-xs text-slate-400">neutral</div>
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <div class="section-title">Teencode Normalizer — ví dụ</div>
+        <table class="data-table">
+          <thead><tr><th>Input mạng xã hội</th><th>Output chuẩn hóa</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">ko / k / hok</td><td class="text-slate-600">không</td></tr>
+            <tr><td class="mono">đc / đk</td><td class="text-slate-600">được</td></tr>
+            <tr><td class="mono">mk / mik</td><td class="text-slate-600">mình</td></tr>
+            <tr><td class="mono">iu / iu thik</td><td class="text-slate-600">yêu / yêu thích</td></tr>
+            <tr><td class="mono">😊</td><td class="text-slate-600 mono text-xs">[SMILE]</td></tr>
+            <tr><td class="mono">🔥</td><td class="text-slate-600 mono text-xs">[FIRE]</td></tr>
+            <tr><td class="mono">💯</td><td class="text-slate-600 mono text-xs">[HUNDRED]</td></tr>
+          </tbody>
+        </table>
+        <p class="text-xs text-slate-400 mt-2">170+ từ lóng và 70 emoji token được chuẩn hóa trước khi đưa vào model</p>
       </div>
     </div>
 
-    <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-      <h2 class="text-base font-bold text-blue-700 border-l-4 border-blue-600 pl-3 mb-4">Tech Stack</h2>
+    <div class="card">
+      <div class="section-title">Tech Stack</div>
       <div class="space-y-4">
         <div>
-          <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Deep Learning</div>
+          <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Deep Learning</div>
           <div class="flex flex-wrap gap-2">
-            <span class="bg-orange-50 text-orange-700 border border-orange-200 rounded-lg px-2.5 py-1 text-xs font-semibold">PyTorch 2.x</span>
-            <span class="bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-lg px-2.5 py-1 text-xs font-semibold">HuggingFace Transformers</span>
-            <span class="bg-blue-50 text-blue-700 border border-blue-200 rounded-lg px-2.5 py-1 text-xs font-semibold">XLM-RoBERTa-base</span>
-            <span class="bg-green-50 text-green-700 border border-green-200 rounded-lg px-2.5 py-1 text-xs font-semibold">PhoBERT-v2 (VinAI)</span>
+            <span class="tag bg-orange-50 text-orange-700 border border-orange-100">PyTorch 2.x</span>
+            <span class="tag bg-yellow-50 text-yellow-700 border border-yellow-100">HuggingFace Transformers</span>
+            <span class="tag bg-blue-50 text-blue-700 border border-blue-100">XLM-RoBERTa-base</span>
+            <span class="tag bg-emerald-50 text-emerald-700 border border-emerald-100">PhoBERT-v2 (VinAI)</span>
+            <span class="tag bg-slate-50 text-slate-700 border border-slate-100">FT-Transformer</span>
           </div>
         </div>
         <div>
-          <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">ML / Analysis</div>
+          <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">ML / Explainability</div>
           <div class="flex flex-wrap gap-2">
-            <span class="bg-blue-50 text-blue-700 border border-blue-200 rounded-lg px-2.5 py-1 text-xs font-semibold">scikit-learn</span>
-            <span class="bg-purple-50 text-purple-700 border border-purple-200 rounded-lg px-2.5 py-1 text-xs font-semibold">LIME</span>
-            <span class="bg-red-50 text-red-700 border border-red-200 rounded-lg px-2.5 py-1 text-xs font-semibold">SHAP</span>
-            <span class="bg-gray-50 text-gray-700 border border-gray-200 rounded-lg px-2.5 py-1 text-xs font-semibold">NumPy / Pandas</span>
+            <span class="tag bg-blue-50 text-blue-700 border border-blue-100">scikit-learn</span>
+            <span class="tag bg-purple-50 text-purple-700 border border-purple-100">LIME</span>
+            <span class="tag bg-red-50 text-red-700 border border-red-100">SHAP KernelExplainer</span>
+            <span class="tag bg-slate-50 text-slate-700 border border-slate-100">NumPy / Pandas</span>
           </div>
         </div>
         <div>
-          <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">App / API</div>
+          <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Serving / Infrastructure</div>
           <div class="flex flex-wrap gap-2">
-            <span class="bg-teal-50 text-teal-700 border border-teal-200 rounded-lg px-2.5 py-1 text-xs font-semibold">FastAPI</span>
-            <span class="bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg px-2.5 py-1 text-xs font-semibold">Google Colab T4</span>
-            <span class="bg-green-50 text-green-700 border border-green-200 rounded-lg px-2.5 py-1 text-xs font-semibold">pytest (185 tests)</span>
+            <span class="tag bg-teal-50 text-teal-700 border border-teal-100">FastAPI + Uvicorn</span>
+            <span class="tag bg-indigo-50 text-indigo-700 border border-indigo-100">Google Colab T4 GPU</span>
+            <span class="tag bg-green-50 text-green-700 border border-green-100">pytest (185 tests)</span>
+            <span class="tag bg-slate-50 text-slate-700 border border-slate-100">ngrok tunnel</span>
+          </div>
+        </div>
+        <div>
+          <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">API Endpoints</div>
+          <div class="space-y-1.5">
+            <div class="flex items-center gap-2 text-xs">
+              <span class="tag bg-emerald-100 text-emerald-700 mono">GET</span>
+              <span class="mono text-slate-600">/health</span>
+              <span class="text-slate-400">— liveness probe + model status</span>
+            </div>
+            <div class="flex items-center gap-2 text-xs">
+              <span class="tag bg-blue-100 text-blue-700 mono">POST</span>
+              <span class="mono text-slate-600">/predict</span>
+              <span class="text-slate-400">— single-text inference</span>
+            </div>
+            <div class="flex items-center gap-2 text-xs">
+              <span class="tag bg-blue-100 text-blue-700 mono">POST</span>
+              <span class="mono text-slate-600">/predict/batch</span>
+              <span class="text-slate-400">— batch (max 64 texts)</span>
+            </div>
+            <div class="flex items-center gap-2 text-xs">
+              <span class="tag bg-blue-100 text-blue-700 mono">POST</span>
+              <span class="mono text-slate-600">/predict/explain</span>
+              <span class="text-slate-400">— inference + LIME attribution</span>
+            </div>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-</div><!-- end tab-method -->
+</div><!-- /tab-method -->
 
 </main>
 
-<!-- ═══════════════════════ FOOTER ═══════════════════════ -->
-<footer class="mt-10 border-t border-gray-200 bg-white py-6 text-center text-xs text-gray-400">
-  <p class="font-semibold text-gray-500">Deep Social Sentiment Analysis</p>
-  <p class="mt-1">Late Fusion · XLM-RoBERTa + FT-Transformer · Vietnamese Emotion 7-class</p>
-  <p class="mt-1"><a href="https://github.com/nhiney/deep-social-sentiment-analysis" class="text-blue-400 hover:text-blue-600">GitHub Repository</a> · <a href="/docs" class="text-blue-400 hover:text-blue-600">API Docs</a></p>
+<!-- ══════════════ FOOTER ══════════════ -->
+<footer class="mt-8 border-t border-slate-200 bg-white py-5">
+  <div class="max-w-7xl mx-auto px-5 flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <div class="text-sm font-semibold text-slate-700">Deep Social Sentiment Analysis</div>
+      <div class="text-xs text-slate-400 mt-0.5">Late Fusion · XLM-RoBERTa + FT-Transformer · Vietnamese 7-class Emotion · Đồ án tốt nghiệp</div>
+    </div>
+    <div class="flex items-center gap-4 text-xs text-slate-400">
+      <a href="https://github.com/nhiney/deep-social-sentiment-analysis" target="_blank" class="hover:text-indigo-600 transition-colors">GitHub</a>
+      <a href="/docs" target="_blank" class="hover:text-indigo-600 transition-colors">API Docs</a>
+    </div>
+  </div>
 </footer>
 
-<!-- ═══════════════════════ LIGHTBOX ═══════════════════════ -->
-<div id="lightbox" class="fixed inset-0 z-50 hidden bg-black/80 flex items-center justify-center p-4" onclick="closeLightbox()">
-  <img id="lightbox-img" src="" class="max-w-full max-h-full rounded-lg shadow-2xl" onclick="event.stopPropagation()">
-  <button class="absolute top-4 right-4 text-white text-3xl font-bold leading-none" onclick="closeLightbox()">×</button>
+<!-- ══════════════ LIGHTBOX ══════════════ -->
+<div id="lightbox" onclick="closeLightbox()">
+  <img id="lightbox-img" src="" onclick="event.stopPropagation()">
+  <button onclick="closeLightbox()" style="position:absolute;top:16px;right:20px;color:white;font-size:28px;font-weight:300;background:none;border:none;cursor:pointer;line-height:1">×</button>
 </div>
 
-<!-- ═══════════════════════ JAVASCRIPT ═══════════════════════ -->
+<!-- ══════════════ JAVASCRIPT ══════════════ -->
 <script>
-// ── Constants ──
-const EMOTION = {
-  joy:      { vi: 'Vui vẻ',    emoji: '😊', color: '#f59e0b' },
-  sadness:  { vi: 'Buồn bã',   emoji: '😢', color: '#3b82f6' },
-  anger:    { vi: 'Tức giận',  emoji: '😠', color: '#ef4444' },
-  fear:     { vi: 'Sợ hãi',    emoji: '😨', color: '#8b5cf6' },
-  disgust:  { vi: 'Ghê tởm',   emoji: '🤢', color: '#22c55e' },
-  surprise: { vi: 'Ngạc nhiên',emoji: '😲', color: '#f97316' },
-  neutral:  { vi: 'Trung tính',emoji: '😐', color: '#64748b' },
+// ── Emotion config ──
+const EMO = {
+  joy:      { vi:'Vui vẻ',     emoji:'😊', color:'#f59e0b', bg:'#fef3c7' },
+  sadness:  { vi:'Buồn bã',    emoji:'😢', color:'#3b82f6', bg:'#dbeafe' },
+  anger:    { vi:'Tức giận',   emoji:'😠', color:'#ef4444', bg:'#fee2e2' },
+  fear:     { vi:'Sợ hãi',     emoji:'😨', color:'#8b5cf6', bg:'#ede9fe' },
+  disgust:  { vi:'Ghê tởm',    emoji:'🤢', color:'#10b981', bg:'#d1fae5' },
+  surprise: { vi:'Ngạc nhiên', emoji:'😲', color:'#f97316', bg:'#ffedd5' },
+  neutral:  { vi:'Trung tính', emoji:'😐', color:'#64748b', bg:'#f1f5f9' },
 };
 const ORDER = ['joy','sadness','anger','fear','disgust','surprise','neutral'];
 
-// ── Tabs ──
+// ── Tab switching ──
 function switchTab(name) {
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
   document.getElementById('btn-' + name).classList.add('active');
 }
@@ -662,99 +923,85 @@ async function checkHealth() {
     const dot  = document.getElementById('status-dot');
     const text = document.getElementById('status-text');
     if (d.model_loaded) {
-      dot.className = 'w-2.5 h-2.5 rounded-full dot-ok';
+      dot.className = 'dot dot-ok';
       text.textContent = 'Model sẵn sàng';
-      text.className = 'text-xs font-semibold text-green-300';
     } else {
-      dot.className = 'w-2.5 h-2.5 rounded-full dot-err dot-blink';
+      dot.className = 'dot dot-err';
       text.textContent = 'Degraded mode';
-      text.className = 'text-xs font-semibold text-red-300';
     }
-  } catch(e) {
+  } catch {
+    document.getElementById('status-dot').className = 'dot dot-err';
     document.getElementById('status-text').textContent = 'API offline';
   }
 }
 checkHealth();
 
-// ── Example select ──
+// ── Fill example ──
 function fillExample() {
   const v = document.getElementById('example-select').value;
   if (v) document.getElementById('text-input').value = v;
 }
 
-// ── Predict ──
+// ── Single predict ──
 async function runPredict() {
   const text = document.getElementById('text-input').value.trim();
-  if (!text) { showError('Vui lòng nhập văn bản trước khi phân tích.'); return; }
+  if (!text) { showErr('result-error', 'error-msg', 'Vui lòng nhập văn bản trước.'); return; }
 
-  const likes    = parseFloat(document.getElementById('likes').value)    || 0;
-  const comments = parseFloat(document.getElementById('comments').value) || 0;
-  const shares   = parseFloat(document.getElementById('shares').value)   || 0;
+  const likes    = +document.getElementById('likes').value    || 0;
+  const comments = +document.getElementById('comments').value || 0;
+  const shares   = +document.getElementById('shares').value   || 0;
 
   const payload = { text, num_features: {} };
-  if (likes > 0)    payload.num_features.likes    = likes;
-  if (comments > 0) payload.num_features.comments = comments;
-  if (shares > 0)   payload.num_features.shares   = shares;
+  if (likes)    payload.num_features.likes    = likes;
+  if (comments) payload.num_features.comments = comments;
+  if (shares)   payload.num_features.shares   = shares;
 
-  showLoading('Đang phân tích...');
-  hideAll(['result-hint','result-card','result-error','lime-section']);
+  hide('result-placeholder'); hide('result-card'); hide('result-error'); hide('lime-section');
+  showLoad('result-loading', 'loading-text', 'Đang phân tích...');
+  document.getElementById('predict-btn').disabled = true;
 
   let data;
   try {
-    const resp = await fetch('/predict', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    if (!resp.ok) {
-      const err = await resp.json();
-      throw new Error(err.detail || `HTTP ${resp.status}`);
-    }
+    const resp = await fetch('/predict', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+    if (!resp.ok) throw new Error((await resp.json()).detail || `HTTP ${resp.status}`);
     data = await resp.json();
   } catch(e) {
-    hideLoading();
-    showError('Lỗi: ' + e.message);
+    hide('result-loading');
+    showErr('result-error', 'error-msg', 'Lỗi: ' + e.message);
+    document.getElementById('predict-btn').disabled = false;
     return;
   }
 
-  hideLoading();
+  hide('result-loading');
   renderResult(data);
+  document.getElementById('predict-btn').disabled = false;
 
-  if (document.getElementById('use-lime').checked) {
-    runLime(text);
-  }
+  if (document.getElementById('use-lime').checked) runLime(text);
 }
 
 function renderResult(data) {
-  const meta = EMOTION[data.label] || { vi: data.label, emoji: '❓', color: '#999' };
-  const conf = (data.confidence * 100).toFixed(1);
+  const m = EMO[data.label] || { vi: data.label, emoji:'?', color:'#64748b', bg:'#f1f5f9' };
+  const pct = (data.confidence * 100).toFixed(1);
 
-  document.getElementById('result-emoji').textContent    = meta.emoji;
-  document.getElementById('result-label-vi').textContent = meta.vi;
+  document.getElementById('result-emoji').textContent    = m.emoji;
+  document.getElementById('result-label-vi').textContent = m.vi;
   document.getElementById('result-label-en').textContent = data.label;
-  document.getElementById('result-conf').textContent     = conf + '%';
-  document.getElementById('result-conf').style.color     = meta.color;
+  document.getElementById('result-conf').textContent     = pct + '%';
+  document.getElementById('result-conf').style.color     = m.color;
+  document.getElementById('result-card').style.borderLeftColor = m.color;
 
-  const card = document.getElementById('result-card');
-  card.style.borderColor = meta.color;
-
-  // Confidence bars
-  const probs = data.probs;
-  const sorted = ORDER.slice().sort((a,b) => probs[b] - probs[a]);
-  const barsHtml = sorted.map(cls => {
-    const m = EMOTION[cls];
-    const pct = (probs[cls] * 100).toFixed(1);
-    return `<div class="mb-2">
-      <div class="flex justify-between text-xs mb-1 font-medium">
-        <span>${m.emoji} ${m.vi}</span>
-        <span style="color:${m.color};font-weight:700">${pct}%</span>
+  const sorted = ORDER.slice().sort((a,b) => (data.probs[b]||0) - (data.probs[a]||0));
+  document.getElementById('conf-bars').innerHTML = sorted.map(cls => {
+    const e = EMO[cls], p = ((data.probs[cls]||0)*100).toFixed(1);
+    const isBest = cls === data.label;
+    return `<div class="${isBest ? 'bg-slate-50 rounded-lg p-2 -mx-2' : ''}">
+      <div class="flex justify-between text-xs mb-1">
+        <span class="font-${isBest?'semibold':'medium'} text-slate-700">${e.emoji} ${e.vi}</span>
+        <span class="mono font-${isBest?'bold':'normal'}" style="color:${e.color}">${p}%</span>
       </div>
-      <div class="bg-gray-100 rounded h-3 overflow-hidden">
-        <div class="bar-fill rounded" style="width:${pct}%;background:${m.color}"></div>
-      </div>
+      <div class="prob-track"><div class="prob-fill" style="width:${p}%;background:${e.color}"></div></div>
     </div>`;
   }).join('');
-  document.getElementById('conf-bars').innerHTML = barsHtml;
 
   show('result-card');
 }
@@ -763,70 +1010,138 @@ async function runLime(text) {
   show('lime-section');
   show('lime-loading');
   hide('lime-content');
-  document.getElementById('loading-text').textContent = 'Đang tính LIME...';
 
   let data;
   try {
-    const resp = await fetch('/predict/explain', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, num_samples: 150 }),
-    });
-    if (!resp.ok) { const e = await resp.json(); throw new Error(e.detail || `HTTP ${resp.status}`); }
+    const resp = await fetch('/predict/explain', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ text, num_samples:150 }) });
+    if (!resp.ok) throw new Error((await resp.json()).detail || `HTTP ${resp.status}`);
     data = await resp.json();
   } catch(e) {
     hide('lime-loading');
-    document.getElementById('lime-html').innerHTML = `<span class="text-red-500 text-sm">LIME không khả dụng: ${e.message}</span>`;
+    document.getElementById('lime-display').innerHTML = `<span class="text-red-500 text-sm">LIME không khả dụng: ${e.message}</span>`;
     show('lime-content');
     return;
   }
 
   hide('lime-loading');
   const exp = data.explanation;
-  document.getElementById('lime-html').innerHTML = exp.highlight_html || '(không có HTML)';
+  document.getElementById('lime-display').innerHTML = exp.highlight_html || '<em class="text-slate-400">Không có dữ liệu</em>';
 
-  // Token table
-  const tokens = (exp.tokens || []).slice().sort((a,b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 10);
-  const label  = data.label;
-  const tbody  = tokens.map(([tok, w]) => {
-    const dir = w > 0
-      ? `<span class="text-green-600 font-semibold">✅ Ủng hộ ${label}</span>`
-      : `<span class="text-red-500 font-semibold">❌ Phản đối ${label}</span>`;
-    const wColor = w > 0 ? 'text-green-600' : 'text-red-500';
-    return `<tr class="border-b hover:bg-gray-50">
-      <td class="px-3 py-1.5 font-mono text-sm">${tok}</td>
-      <td class="px-3 py-1.5 text-right font-mono text-sm ${wColor}">${w.toFixed(4)}</td>
-      <td class="px-3 py-1.5 text-sm">${dir}</td>
+  const tokens = (exp.tokens||[]).slice().sort((a,b)=>Math.abs(b[1])-Math.abs(a[1])).slice(0,10);
+  document.getElementById('lime-tbody').innerHTML = tokens.map(([tok, w]) => {
+    const isPos = w > 0;
+    const dir = isPos
+      ? `<span class="tag bg-emerald-50 text-emerald-700">+${data.label}</span>`
+      : `<span class="tag bg-red-50 text-red-600">−${data.label}</span>`;
+    return `<tr>
+      <td class="mono">${tok}</td>
+      <td class="text-right mono ${isPos?'text-emerald-600':'text-red-500'} font-semibold">${w.toFixed(4)}</td>
+      <td>${dir}</td>
     </tr>`;
   }).join('');
-  document.getElementById('lime-tbody').innerHTML = tbody;
+
   show('lime-content');
 }
 
+// ── Batch predict ──
+const batchInput = document.getElementById('batch-input');
+batchInput.addEventListener('input', () => {
+  const lines = batchInput.value.split('\n').filter(l => l.trim()).length;
+  document.getElementById('batch-count').textContent = lines + ' dòng';
+});
+
+function clearBatch() {
+  batchInput.value = '';
+  document.getElementById('batch-count').textContent = '0 dòng';
+  hide('batch-results'); hide('batch-error');
+  show('batch-placeholder');
+}
+
+let batchData = [];
+
+async function runBatch() {
+  const texts = batchInput.value.split('\n').map(l=>l.trim()).filter(Boolean);
+  if (!texts.length) { showErr('batch-error','batch-error-msg','Vui lòng nhập ít nhất một dòng.'); return; }
+  if (texts.length > 64) { showErr('batch-error','batch-error-msg','Tối đa 64 văn bản mỗi lần.'); return; }
+
+  hide('batch-placeholder'); hide('batch-results'); hide('batch-error');
+  showLoad('batch-loading', 'batch-loading-text', `Đang xử lý ${texts.length} văn bản...`);
+  document.getElementById('batch-btn').disabled = true;
+
+  try {
+    const resp = await fetch('/predict/batch', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ texts, batch_size:16 }) });
+    if (!resp.ok) throw new Error((await resp.json()).detail || `HTTP ${resp.status}`);
+    const data = await resp.json();
+
+    hide('batch-loading');
+    batchData = data.predictions.map((p, i) => ({ idx:i+1, text:texts[i], ...p }));
+    renderBatch(texts, data.predictions);
+  } catch(e) {
+    hide('batch-loading');
+    showErr('batch-error','batch-error-msg','Lỗi: ' + e.message);
+  }
+  document.getElementById('batch-btn').disabled = false;
+}
+
+function renderBatch(texts, preds) {
+  // Summary counts
+  const counts = {};
+  ORDER.forEach(k => counts[k] = 0);
+  preds.forEach(p => { if (counts[p.label]!==undefined) counts[p.label]++; });
+  document.getElementById('batch-summary').innerHTML = ORDER
+    .filter(k => counts[k] > 0)
+    .map(k => `<span class="emo-chip" style="background:${EMO[k].bg};color:${EMO[k].color}">${EMO[k].emoji} ${EMO[k].vi} <strong>${counts[k]}</strong></span>`)
+    .join('');
+
+  document.getElementById('batch-result-count').textContent = preds.length + ' kết quả';
+
+  document.getElementById('batch-tbody').innerHTML = preds.map((p, i) => {
+    const m = EMO[p.label] || EMO.neutral;
+    const pct = (p.confidence*100).toFixed(1);
+    const shortText = texts[i].length > 80 ? texts[i].slice(0,80)+'…' : texts[i];
+    return `<tr>
+      <td class="mono text-slate-400 text-xs">${i+1}</td>
+      <td class="max-w-xs" title="${texts[i].replace(/"/g,'&quot;')}">${shortText}</td>
+      <td class="text-center"><span class="emo-chip" style="background:${m.bg};color:${m.color}">${m.emoji} ${m.vi}</span></td>
+      <td class="text-right mono font-semibold" style="color:${m.color}">${pct}%</td>
+    </tr>`;
+  }).join('');
+
+  show('batch-results');
+}
+
+function exportBatchCSV() {
+  if (!batchData.length) return;
+  const header = 'index,text,label,confidence';
+  const rows = batchData.map(d => `${d.idx},"${(d.text||'').replace(/"/g,'""')}",${d.label},${(d.confidence*100).toFixed(2)}`);
+  const csv = [header, ...rows].join('\n');
+  const blob = new Blob(['﻿'+csv], { type:'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'vemotion_batch_results.csv';
+  a.click();
+}
+
 // ── Helpers ──
-function show(id)  { document.getElementById(id).classList.remove('hidden'); }
-function hide(id)  { document.getElementById(id).classList.add('hidden'); }
-function hideAll(ids) { ids.forEach(hide); }
+function show(id) { document.getElementById(id).classList.remove('hidden'); }
+function hide(id) { document.getElementById(id).classList.add('hidden'); }
 
-function showLoading(msg) {
-  hide('result-hint');
-  document.getElementById('loading-text').textContent = msg || 'Đang xử lý...';
-  show('result-loading');
-}
-function hideLoading() { hide('result-loading'); }
-
-function showError(msg) {
-  document.getElementById('error-msg').textContent = msg;
-  show('result-error');
+function showLoad(loadId, textId, msg) {
+  document.getElementById(textId).textContent = msg;
+  show(loadId);
 }
 
+function showErr(containerId, msgId, msg) {
+  document.getElementById(msgId).textContent = msg;
+  show(containerId);
+}
+
+// ── Lightbox ──
 function openFig(src) {
   document.getElementById('lightbox-img').src = src;
-  document.getElementById('lightbox').classList.remove('hidden');
   document.getElementById('lightbox').style.display = 'flex';
 }
 function closeLightbox() {
-  document.getElementById('lightbox').classList.add('hidden');
   document.getElementById('lightbox').style.display = 'none';
 }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
