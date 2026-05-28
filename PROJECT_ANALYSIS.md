@@ -1,6 +1,6 @@
 # Phân tích toàn diện đồ án: Deep Social Sentiment Analysis
 > Tài liệu nội bộ — tổng hợp hiện trạng, lộ trình hoàn thiện và chiến lược đạt điểm xuất sắc  
-> Cập nhật lần cuối: **2026-05-26 (buổi 7)**
+> Cập nhật lần cuối: **2026-05-28 (buổi 8)**
 
 ---
 
@@ -739,7 +739,7 @@ Documentation:          ██████████████████�
 | P2-2 | SHAP/Captum | README đề cập nhưng chưa implement — chỉ có LIME. Checkpoint đã có local. |
 | P2-4 | Calibration analysis | ECE score + reliability diagram. Checkpoint đã có local. |
 | P2-5 | Pseudo-label pipeline | Label 990 unlabeled posts bằng model đã train. Checkpoint đã có local. |
-| P2-6 | test_dataset.py + test_evaluate.py | Thêm 2 test files, không cần GPU |
+| ~~P2-6~~ | ~~test_dataset.py + test_evaluate.py~~ | ✅ DONE B8 — 30 + 39 = 69 tests, 185/185 total |
 | P2-7 | PhoBERT vs XLM-R (Exp4) | Cần Colab GPU (~10 phút) |
 
 ### 6.4 🐛 Bug tiềm ẩn cần fix trước khi train
@@ -911,7 +911,7 @@ Imbalance ratio joy/disgust = 3.1× → cần class weights (đã implement tron
 |---|---|---|---|
 | **Kruskal-Wallis justify FT-Transformer** | Thấp | ⭐⭐⭐⭐ | ✅ DONE B2 |
 | **Ablation study 3 bước** | Trung bình | ⭐⭐⭐⭐⭐ | ✅ DONE B6 — exp1=0.6235 → exp2=0.6548 → exp3=0.6454 |
-| **Unit tests 116 tests** | Thấp | ⭐⭐⭐ | ✅ DONE B5+B7 — 116/116 pass |
+| **Unit tests 185 tests** | Thấp | ⭐⭐⭐ | ✅ DONE B5+B7+B8 — 185/185 pass |
 | **Teencode dictionary 170+ entries** | Thấp | ⭐⭐⭐ | ✅ DONE B5 |
 | **Notebook 02 số thật + 5 figures** | Thấp | ⭐⭐⭐ | ✅ DONE B7 |
 | **PhoBERT vs XLM-R comparison** | Thấp | ⭐⭐⭐⭐ | ⬜ Chưa làm — cần Colab GPU |
@@ -960,8 +960,8 @@ Imbalance ratio joy/disgust = 3.1× → cần class weights (đã implement tron
 - [x] Unit tests preprocessing (`tests/test_preprocessing.py` — 64 tests, 100% pass) ✅ B5
 - [x] Unit tests models (`tests/test_models.py` — 27 tests, 100% pass, no GPU) ✅ B5
 - [x] Teencode dictionary mở rộng (`data/external/teencode.json` — 170+ entries) ✅ B5
-- [ ] `tests/test_dataset.py` — SocialSentimentDataset + collate_fn (không cần GPU)
-- [ ] `tests/test_evaluate.py` — F1-Macro calculation, confusion matrix output (không cần GPU)
+- [x] `tests/test_dataset.py` — 30 tests, SocialSentimentDataset + collate_fn ✅ B8
+- [x] `tests/test_evaluate.py` — 39 tests, metric functions ✅ B8 — **TỔNG: 185/185 pass**
 
 ### 10.6 Advanced (điểm xuất sắc)
 - [ ] **PhoBERT vs XLM-R** comparison (Exp4) — cần Colab GPU ~10 phút
@@ -985,6 +985,7 @@ Imbalance ratio joy/disgust = 3.1× → cần class weights (đã implement tron
 | 2026-05-24 (B4) | Script pseudo-labeling (`scripts/pseudo_label_apify.py` — mDeBERTa-v3 NLI zero-shot, 7 Vietnamese emotion hypotheses, confidence threshold 0.35, all 990 posts). Update `prepare_data.py` — 3-source merge (crawled + UIT-VSMEC + pseudo), tabular feature derivation, interaction median imputation, 20-column Parquet output. Smoke test OK: 1769→20cols. |
 | 2026-05-25 (B5) | `scripts/download_uit_vsmec.py` — auto download + run pipeline (1 command). `data/external/teencode.json` — 170+ extended slang entries. `tests/test_preprocessing.py` — 64 tests (TeencodeNormalizer + TabularPreprocessor + stratified_split + kappa), 100% pass. `tests/test_models.py` — 27 tests (LateFusionConfig + DnnBaseline + TfidfBaseline), no GPU needed, 100% pass. `notebooks/02_model_analysis.ipynb` — 8-section template (learning curves, confusion matrix, ablation bar chart, error analysis, LIME) với synthetic placeholder, sẵn sàng điền số thật. Tổng: 116 tests all pass. |
 | 2026-05-26 (B7) | Deploy model local từ Drive (5.8GB, 29 files). Fix inference.py column names (n_exclam→n_exclamation, thêm n_hashtag/likes/comments/shares/is_crawled). Fix notebook 02 API calls. Chạy notebook 02 thành công với số thật → 5 figures. Fix lifespan degraded mode bug (app/main.py). Fix TestDegradedMode fixture. 116/116 tests. Xóa colab_sentiment/ + cache folders. |
+| 2026-05-28 (B8) | Commit test_dataset.py (30 tests) + test_evaluate.py (39 tests). Full suite: 185/185 pass. Cập nhật PROJECT_ANALYSIS + checklist. |
 
 ---
 
