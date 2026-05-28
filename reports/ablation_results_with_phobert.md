@@ -1,0 +1,6 @@
+| experiment         | text_model            | use_normalizer   | use_tabular   |   best_epoch |   train_seconds |   f1_macro |   precision_macro |   recall_macro |   accuracy |   f1_weighted |
+|:-------------------|:----------------------|:-----------------|:--------------|-------------:|----------------:|-----------:|------------------:|---------------:|-----------:|--------------:|
+| exp1_xlmr_only     | xlm-roberta-base      | False            | False         |            4 |           418.7 |   0.623546 |          0.607224 |       0.662569 |   0.642379 |      0.634587 |
+| exp2_xlmr_teencode | xlm-roberta-base      | False            | False         |            4 |           455.5 |   0.654833 |          0.640202 |       0.686923 |   0.664684 |      0.659357 |
+| exp3_full_fusion   | xlm-roberta-base      | False            | True          |            3 |           446.9 |   0.645414 |          0.630366 |       0.673851 |   0.658736 |      0.654994 |
+| exp4_phobert       | vinai/phobert-base-v2 | False            | False         |            3 |           464.5 |   0.71855  |          0.711213 |       0.727988 |   0.72119  |      0.720367 |
