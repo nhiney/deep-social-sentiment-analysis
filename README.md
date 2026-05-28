@@ -1,3 +1,13 @@
+---
+title: ViEmotion — Vietnamese Emotion Classification
+emoji: 🧠
+colorFrom: indigo
+colorTo: purple
+sdk: docker
+app_port: 7860
+pinned: true
+---
+
 # Deep Social Sentiment Analysis
 
 Phân loại cảm xúc tiếng Việt 7 lớp trên mạng xã hội — kiến trúc **Late Fusion** kết hợp:

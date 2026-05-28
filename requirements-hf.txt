@@ -1,0 +1,27 @@
+# Production-only deps for Hugging Face Spaces (CPU inference)
+--index-url https://download.pytorch.org/whl/cpu
+
+torch==2.2.2+cpu
+
+# Reset index for the rest
+--extra-index-url https://pypi.org/simple
+
+transformers>=4.40.0
+tokenizers>=0.15.0
+accelerate>=0.27.0
+rtdl-revisiting-models>=0.0.2
+einops>=0.7.0
+numpy>=1.26.0
+pandas>=2.1.0
+scikit-learn>=1.4.0
+scipy>=1.12.0
+joblib>=1.3.0
+unidecode>=1.3.7
+regex>=2023.12.25
+lime>=0.2.0.1
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
+pydantic>=2.6.0
+huggingface_hub>=0.21.0
+sentencepiece>=0.1.99
+pyarrow>=14.0.0
