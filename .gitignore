@@ -87,6 +87,8 @@ outputs/
 reports/figures/*
 !reports/figures/.gitkeep
 !reports/figures/ablation_with_phobert.png
+!reports/figures/shap_tabular.png
+!reports/figures/shap_summary.png
 
 # HuggingFace cache
 .cache/
