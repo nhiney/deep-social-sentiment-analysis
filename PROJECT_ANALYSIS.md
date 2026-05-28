@@ -1,6 +1,6 @@
 # Phân tích toàn diện đồ án: Deep Social Sentiment Analysis
 > Tài liệu nội bộ — tổng hợp hiện trạng, lộ trình hoàn thiện và chiến lược đạt điểm xuất sắc  
-> Cập nhật lần cuối: **2026-05-28 (buổi 8)**
+> Cập nhật lần cuối: **2026-05-28 (buổi 8 — Exp4 PhoBERT done)**
 
 ---
 
@@ -885,7 +885,7 @@ Imbalance ratio joy/disgust = 3.1× → cần class weights (đã implement tron
 | Câu hỏi | Cần chuẩn bị |
 |---|---|
 | "Tại sao dùng FT-Transformer cho tabular branch?" | **→ Chỉ vào Kruskal-Wallis table**: p < 0.001 cho likes/comments/shares → interaction signals differ by emotion |
-| "Tại sao chọn XLM-R mà không phải PhoBERT?" | **→ Bảng so sánh** XLM-R vs PhoBERT F1-Macro trên test set (cần Phase 4) |
+| "Tại sao chọn XLM-R mà không phải PhoBERT?" | **→ Exp4 xác nhận PhoBERT-v2 F1=0.7186 > XLM-R 0.6548.** Trả lời: "Ablation study chính là để kiểm tra điều này. PhoBERT tốt hơn về F1 (+6.37%), nhưng yêu cầu VnCoreNLP word segmentation — không ổn định trên teencode/mạng xã hội. XLM-R dùng SentencePiece, deploy đơn giản hơn và phù hợp hơn cho văn bản noisy. Đây là trade-off performance vs robustness." |
 | "Late Fusion có tốt hơn Text-only không?" | **→ Ablation table**: Exp2 vs Exp3 — chênh lệch F1 |
 | "Teencode normalizer có thực sự giúp ích không?" | **→ Ablation table**: Exp1 vs Exp2 — chênh lệch F1 |
 | "Dữ liệu lấy từ đâu, chất lượng thế nào?" | **→ Mô tả crawl_emotions.xlsx + Apify pipeline + UIT-VSMEC** |
@@ -898,12 +898,14 @@ Imbalance ratio joy/disgust = 3.1× → cần class weights (đã implement tron
 |---|---|---|---|---|
 | TF-IDF + LogReg | ~0.42 | ~0.44 | ~0.41 | ~0.48 |
 | DNN bag-of-words | ~0.45 | ~0.46 | ~0.44 | ~0.51 |
-| XLM-R only (Exp1) | **0.6235** | 0.6072 | 0.6626 | 0.6424 |
-| XLM-R + Teencode (Exp2) | **0.6548** | 0.6402 | 0.6869 | 0.6647 |
+| XLM-R only (Exp1) | 0.6235 | 0.6072 | 0.6626 | 0.6424 |
+| XLM-R + Teencode (Exp2) | 0.6548 | 0.6402 | 0.6869 | 0.6647 |
 | Full Fusion (Exp3) | 0.6454 | 0.6304 | 0.6739 | 0.6587 |
+| **PhoBERT-v2 + Teencode (Exp4)** | **0.7186** | — | — | **0.7212** |
 | **Best model (Full train, test set)** | **0.6877** | **0.6976** | **0.6874** | **0.7020** |
 
-> ✅ Kết quả thực tế từ Colab T4 GPU (B6). Baseline TF-IDF/DNN là ước tính chưa chạy.
+> ✅ Kết quả thực tế từ Colab T4 GPU. Exp4 PhoBERT (+B8): F1=0.7186, Δ=+0.0637 vs Exp2 XLM-R.
+> Baseline TF-IDF/DNN là ước tính chưa chạy.
 
 ### 9.3 Điểm mới có thể nâng cấp
 
@@ -914,7 +916,7 @@ Imbalance ratio joy/disgust = 3.1× → cần class weights (đã implement tron
 | **Unit tests 185 tests** | Thấp | ⭐⭐⭐ | ✅ DONE B5+B7+B8 — 185/185 pass |
 | **Teencode dictionary 170+ entries** | Thấp | ⭐⭐⭐ | ✅ DONE B5 |
 | **Notebook 02 số thật + 5 figures** | Thấp | ⭐⭐⭐ | ✅ DONE B7 |
-| **PhoBERT vs XLM-R comparison** | Thấp | ⭐⭐⭐⭐ | ⬜ Chưa làm — cần Colab GPU |
+| **PhoBERT vs XLM-R comparison** | Thấp | ⭐⭐⭐⭐ | ✅ DONE B8 — Exp4 PhoBERT F1=0.7186 (+0.0637 vs XLM-R Exp2) |
 | **Pseudo-label + augment** | Trung bình | ⭐⭐⭐ | ⬜ Cần Colab GPU (checkpoint đã có local) |
 | **SHAP tabular attribution** | Trung bình | ⭐⭐⭐⭐ | ⬜ Cần Colab (checkpoint đã có local) |
 | **Gated Fusion variant** | Cao | ⭐⭐⭐⭐⭐ | ⬜ Chưa làm — implement + train |
@@ -965,7 +967,7 @@ Imbalance ratio joy/disgust = 3.1× → cần class weights (đã implement tron
 - [x] `tests/test_evaluate.py` — 39 tests, metric functions ✅ B8 — **TỔNG: 185/185 pass**
 
 ### 10.6 Advanced (điểm xuất sắc)
-- [ ] **PhoBERT vs XLM-R** comparison (Exp4) — cần Colab GPU ~10 phút
+- [x] **PhoBERT vs XLM-R** comparison (Exp4) ✅ B8 — F1=0.7186 (+6.37% vs XLM-R), PhoBERT thắng
 - [ ] **SHAP** visualization cho tabular branch — cần Colab (checkpoint local sẵn)
 - [ ] Pseudo-label 990 unlabeled posts bằng model đã train — cần Colab
 - [ ] Gated Fusion variant — implement + train
@@ -986,7 +988,7 @@ Imbalance ratio joy/disgust = 3.1× → cần class weights (đã implement tron
 | 2026-05-24 (B4) | Script pseudo-labeling (`scripts/pseudo_label_apify.py` — mDeBERTa-v3 NLI zero-shot, 7 Vietnamese emotion hypotheses, confidence threshold 0.35, all 990 posts). Update `prepare_data.py` — 3-source merge (crawled + UIT-VSMEC + pseudo), tabular feature derivation, interaction median imputation, 20-column Parquet output. Smoke test OK: 1769→20cols. |
 | 2026-05-25 (B5) | `scripts/download_uit_vsmec.py` — auto download + run pipeline (1 command). `data/external/teencode.json` — 170+ extended slang entries. `tests/test_preprocessing.py` — 64 tests (TeencodeNormalizer + TabularPreprocessor + stratified_split + kappa), 100% pass. `tests/test_models.py` — 27 tests (LateFusionConfig + DnnBaseline + TfidfBaseline), no GPU needed, 100% pass. `notebooks/02_model_analysis.ipynb` — 8-section template (learning curves, confusion matrix, ablation bar chart, error analysis, LIME) với synthetic placeholder, sẵn sàng điền số thật. Tổng: 116 tests all pass. |
 | 2026-05-26 (B7) | Deploy model local từ Drive (5.8GB, 29 files). Fix inference.py column names (n_exclam→n_exclamation, thêm n_hashtag/likes/comments/shares/is_crawled). Fix notebook 02 API calls. Chạy notebook 02 thành công với số thật → 5 figures. Fix lifespan degraded mode bug (app/main.py). Fix TestDegradedMode fixture. 116/116 tests. Xóa colab_sentiment/ + cache folders. |
-| 2026-05-28 (B8) | Commit test_dataset.py (30 tests) + test_evaluate.py (39 tests). Full suite: 185/185 pass. Test Streamlit+FastAPI live: Streamlit boots, /health=ok, /predict 5/5 đúng nhãn, /predict/explain LIME trả "vui"(0.41)+"😊"(0.16) cho câu joy, HTML highlight 1181 chars. |
+| 2026-05-28 (B8) | Commit test_dataset.py (30 tests) + test_evaluate.py (39 tests). 185/185 pass. Test Streamlit+FastAPI live OK. Exp4 PhoBERT-v2 chạy trên Colab T4: F1-Macro=0.7186, Accuracy=0.7212, Δ=+0.0637 vs XLM-R Exp2. PhoBERT thắng. Lưu ablation_results_with_phobert.csv/md/png. |
 
 ---
 
