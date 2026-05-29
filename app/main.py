@@ -120,6 +120,41 @@ class HealthResponse(BaseModel):
 
 
 # --------------------------------------------------------------------------- #
+# HF Hub model download (for cloud deployment)
+# --------------------------------------------------------------------------- #
+def _maybe_download_model(checkpoint: str) -> None:
+    """Download model from HF Hub when running on HF Spaces (model not bundled)."""
+    from pathlib import Path
+    ckpt = Path(checkpoint)
+    needed = ["pytorch_model.bin", "config.json", "tab_preprocessor.joblib"]
+    if all((ckpt / f).exists() for f in needed):
+        return  # already present locally
+
+    hf_repo = os.environ.get("HF_MODEL_REPO", "").strip()
+    if not hf_repo:
+        logger.warning("Model not found at %s and HF_MODEL_REPO not set.", checkpoint)
+        return
+
+    logger.info("Downloading model from HF Hub: %s → %s", hf_repo, ckpt)
+    try:
+        from huggingface_hub import hf_hub_download
+        ckpt.mkdir(parents=True, exist_ok=True)
+        for fname in needed:
+            dest = ckpt / fname
+            if not dest.exists():
+                logger.info("  Downloading %s ...", fname)
+                local = hf_hub_download(
+                    repo_id=hf_repo,
+                    filename=fname,
+                    local_dir=str(ckpt),
+                )
+                logger.info("  Saved → %s", local)
+        logger.info("Model download complete.")
+    except Exception as exc:
+        logger.error("Failed to download model: %s", exc)
+
+
+# --------------------------------------------------------------------------- #
 # App lifecycle
 # --------------------------------------------------------------------------- #
 @contextlib.asynccontextmanager
@@ -129,6 +164,9 @@ async def _lifespan(application: FastAPI):
 
     checkpoint = os.environ.get(_CHECKPOINT_ENV, _DEFAULT_CHECKPOINT)
     logger.info("Loading model from: %s", checkpoint)
+
+    # On HF Spaces: download model from Hub if checkpoint not found locally.
+    _maybe_download_model(checkpoint)
 
     try:
         # Deferred import so the module loads even without torch installed.

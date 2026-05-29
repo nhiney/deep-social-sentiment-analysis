@@ -14,7 +14,7 @@ RUN pip install --no-cache-dir -r requirements-hf.txt
 COPY app/ app/
 COPY src/ src/
 COPY configs/ configs/
-COPY scripts/hf_startup.py scripts/hf_startup.py
+COPY reports/figures/ reports/figures/
 
 # HF Spaces chạy port 7860
 EXPOSE 7860
@@ -22,4 +22,4 @@ EXPOSE 7860
 ENV MODEL_CHECKPOINT=/code/models/best_model
 ENV HF_MODEL_REPO=nhiney/viemotion-model
 
-CMD ["python", "scripts/hf_startup.py"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860", "--workers", "1"]
