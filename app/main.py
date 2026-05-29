@@ -123,35 +123,36 @@ class HealthResponse(BaseModel):
 # HF Hub model download (for cloud deployment)
 # --------------------------------------------------------------------------- #
 def _maybe_download_model(checkpoint: str) -> None:
-    """Download model from HF Hub when running on HF Spaces (model not bundled)."""
+    """Download model files directly via HTTP when not found locally."""
+    import urllib.request
     from pathlib import Path
+
     ckpt = Path(checkpoint)
     needed = ["pytorch_model.bin", "config.json", "tab_preprocessor.joblib"]
     if all((ckpt / f).exists() for f in needed):
-        return  # already present locally
+        return
 
     hf_repo = os.environ.get("HF_MODEL_REPO", "").strip()
     if not hf_repo:
         logger.warning("Model not found at %s and HF_MODEL_REPO not set.", checkpoint)
         return
 
-    logger.info("Downloading model from HF Hub: %s → %s", hf_repo, ckpt)
-    try:
-        from huggingface_hub import hf_hub_download
-        ckpt.mkdir(parents=True, exist_ok=True)
-        for fname in needed:
-            dest = ckpt / fname
-            if not dest.exists():
-                logger.info("  Downloading %s ...", fname)
-                local = hf_hub_download(
-                    repo_id=hf_repo,
-                    filename=fname,
-                    local_dir=str(ckpt),
-                )
-                logger.info("  Saved → %s", local)
-        logger.info("Model download complete.")
-    except Exception as exc:
-        logger.error("Failed to download model: %s", exc)
+    ckpt.mkdir(parents=True, exist_ok=True)
+    base_url = f"https://huggingface.co/{hf_repo}/resolve/main"
+    for fname in needed:
+        dest = ckpt / fname
+        if dest.exists():
+            continue
+        url = f"{base_url}/{fname}"
+        logger.info("Downloading %s (~%.0f MB)...", fname,
+                    {"pytorch_model.bin": 1100, "config.json": 0.01,
+                     "tab_preprocessor.joblib": 0.001}.get(fname, 1))
+        try:
+            urllib.request.urlretrieve(url, str(dest))
+            logger.info("  ✓ %s (%.1f MB)", fname, dest.stat().st_size / 1e6)
+        except Exception as exc:
+            logger.error("  ✗ Failed to download %s: %s", fname, exc)
+    logger.info("Model download complete.")
 
 
 # --------------------------------------------------------------------------- #
