@@ -363,59 +363,127 @@
 <!-- TAB: DEMO TRỰC TIẾP                           -->
 <!-- ══════════════════════════════════════════════ -->
 <div id="tab-demo" class="tab-pane space-y-5">
+
+  <!-- ── Ví dụ theo danh mục ── -->
+  <div class="card">
+    <div class="section-title">Chọn ví dụ theo danh mục</div>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+      <div>
+        <div class="text-xs font-semibold text-slate-400 mb-1.5">😊 7 Cảm xúc cơ bản</div>
+        <select id="example-select" onchange="fillExample(this.value,'normal')" class="form-input text-xs bg-white w-full">
+          <option value="">— Chọn —</option>
+          <option value='{"text":"Hôm nay sinh nhật đứa bạn thân nhất, vui quá trời!! Chúc mừng sinh nhật nha 🎂🎉 mãi yêu bạn lắm luôn","likes":120,"comments":45,"shares":8}'>😊 Vui — Sinh nhật bạn</option>
+          <option value='{"text":"Xa nhà mấy tháng rồi mà nhớ quá, nhớ mẹ, nhớ em... Hôm nay trời mưa lại càng buồn hơn 😢","likes":203,"comments":67,"shares":12}'>😢 Buồn — Nhớ quê</option>
+          <option value='{"text":"Kẹt xe 2 tiếng đồng hồ mà không nhúc nhích được, điên thật sự!!! Thành phố này giao thông tệ quá đi","likes":1200,"comments":340,"shares":89}'>😠 Tức — Kẹt xe</option>
+          <option value='{"text":"Ngày mai thi mà chưa học được gì hết, lo sợ quá... Không biết có qua môn không nữa 😰","likes":15,"comments":8,"shares":0}'>😨 Sợ — Thi cử</option>
+          <option value='{"text":"Quán này quảng cáo ngon mà ăn vào thất vọng ghê gớm, vừa đắt vừa dở, không bao giờ quay lại nữa","likes":89,"comments":156,"shares":43}'>🤢 Ghê — Đồ ăn tệ</option>
+          <option value='{"text":"Ủa thật không?! Không thể tin được là chuyện đó lại xảy ra, shock nặng luôn á 😱 ai mà ngờ được","likes":3400,"comments":890,"shares":450}'>😲 Ngạc nhiên — Tin bất ngờ</option>
+          <option value='{"text":"Phòng họp thay đổi sang phòng 3B, bắt đầu lúc 9 giờ sáng mai. Mọi người chú ý nhé.","likes":2,"comments":1,"shares":0}'>😐 Trung tính — Thông báo</option>
+        </select>
+      </div>
+      <div>
+        <div class="text-xs font-semibold text-orange-500 mb-1.5">⚡ Teencode nặng</div>
+        <select onchange="fillExample(this.value,'teencode')" class="form-input text-xs bg-white w-full">
+          <option value="">— Chọn —</option>
+          <option value='{"text":"mk đang bùn cực, ng iu mk nó pik tình cảm mk mà vẫn vậy, mk tức lắm mà k dám nói 😤","likes":34,"comments":12,"shares":2}'>Buồn + tức — Tình cảm (teencode)</option>
+          <option value='{"text":"hôm nay vui vcl, thi đậu rồi bà con ơi!!! báo công cha mẹ lun nha mọi người 🎉🎉","likes":567,"comments":234,"shares":45}'>Vui — Thi đậu (teencode)</option>
+          <option value='{"text":"éo hiểu sao người ta lại làm vậy, ghét vclll, mất dạy thật sự, bực bội cả ngày","likes":45,"comments":89,"shares":5}'>Tức giận (teencode mạnh)</option>
+          <option value='{"text":"lo quá mấy bạn ơi, nhà mk gần đó lắm, k bt có sao k nữa 😰 cầu mong bình an","likes":890,"comments":445,"shares":223}'>Sợ hãi (tin khẩn)</option>
+        </select>
+      </div>
+      <div>
+        <div class="text-xs font-semibold text-violet-500 mb-1.5">🌐 Code-switching</div>
+        <select onchange="fillExample(this.value,'codesw')" class="form-input text-xs bg-white w-full">
+          <option value="">— Chọn —</option>
+          <option value='{"text":"Hôm nay feeling so good, cuộc sống amazing lắm nha mọi người ơi!! Life is beautiful 🌟","likes":234,"comments":56,"shares":18}'>Vui — Vietnamese + English</option>
+          <option value='{"text":"Bro ơi seriously tui không hiểu sao situation này lại complicated vậy, so frustrated rn 😤","likes":23,"comments":45,"shares":3}'>Tức — Mixed language</option>
+          <option value='{"text":"Team mình just finished the project, quá happy luôn, all the hard work đã pay off rồi! 🎊","likes":456,"comments":123,"shares":34}'>Vui — Công việc (EN+VN)</option>
+          <option value='{"text":"Literally không thể believe được, shocked hoàn toàn, this is so unexpected omg 😱","likes":1200,"comments":567,"shares":234}'>Ngạc nhiên — Mixed</option>
+        </select>
+      </div>
+      <div>
+        <div class="text-xs font-semibold text-red-500 mb-1.5">🎭 Khó / Mơ hồ</div>
+        <select onchange="fillExample(this.value,'edge')" class="form-input text-xs bg-white w-full">
+          <option value="">— Chọn —</option>
+          <option value='{"text":"Ừ đúng rồi, dịch vụ khách hàng của các bạn tuyệt vời lắm, chờ 2 tiếng mà không ai nghe máy. Xuất sắc thật.","likes":234,"comments":89,"shares":45}'>Mỉa mai — Dịch vụ tệ</option>
+          <option value='{"text":"Thôi được rồi, không sao cả","likes":0,"comments":0,"shares":0}'>Mơ hồ — Trung tính hay buồn?</option>
+          <option value='{"text":"Vừa vui vừa buồn không biết nói sao... Tốt nghiệp rồi nhưng xa bạn bè quá 😊😢","likes":89,"comments":34,"shares":5}'>Cảm xúc hỗn hợp</option>
+          <option value='{"text":"Ok","likes":0,"comments":0,"shares":0}'>Văn bản cực ngắn</option>
+          <option value='{"text":"Chính phủ vừa ban hành nghị định mới về thuế thu nhập cá nhân áp dụng từ tháng 1 năm sau. Mức thuế suất thay đổi theo từng bậc thu nhập.","likes":45,"comments":23,"shares":67}'>Văn bản trung tính dài</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
   <div class="grid grid-cols-1 lg:grid-cols-5 gap-5">
 
     <!-- Input panel -->
     <div class="lg:col-span-3 space-y-4">
       <div class="card">
-        <div class="section-title">Phân tích cảm xúc tiếng Việt</div>
+        <div class="section-title">Nhập liệu & Cấu hình</div>
 
         <div class="mb-3">
-          <label class="block text-xs font-semibold text-slate-500 mb-1.5">Câu ví dụ</label>
-          <select id="example-select" onchange="fillExample()" class="form-input text-sm bg-white">
-            <option value="">— Nhập tự do —</option>
-            <option value="Hôm nay sinh nhật đứa bạn thân nhất, vui quá trời!! Chúc mừng sinh nhật nha 🎂🎉 mãi yêu bạn lắm luôn">Vui vẻ — Sinh nhật bạn thân</option>
-            <option value="Xa nhà mấy tháng rồi mà nhớ quá, nhớ mẹ, nhớ em... Hôm nay trời mưa lại càng buồn hơn 😢">Buồn bã — Nhớ quê hương</option>
-            <option value="Kẹt xe 2 tiếng đồng hồ mà không nhúc nhích được, điên thật sự!!! Thành phố này giao thông tệ quá đi">Tức giận — Kẹt xe</option>
-            <option value="Ngày mai thi mà chưa học được gì hết, lo sợ quá... Không biết có qua môn không nữa 😰">Sợ hãi — Thi cử</option>
-            <option value="Quán này quảng cáo ngon mà ăn vào thất vọng ghê gớm, vừa đắt vừa dở, không bao giờ quay lại nữa">Ghê tởm — Đồ ăn tệ</option>
-            <option value="Ủa thật không?! Không thể tin được là chuyện đó lại xảy ra, shock nặng luôn á 😱 ai mà ngờ được">Ngạc nhiên — Tin tức bất ngờ</option>
-            <option value="Phòng họp thay đổi sang phòng 3B, bắt đầu lúc 9 giờ sáng mai. Mọi người chú ý nhé.">Trung tính — Thông báo hành chính</option>
-          </select>
-        </div>
-
-        <div class="mb-3">
-          <label class="block text-xs font-semibold text-slate-500 mb-1.5">Văn bản tiếng Việt</label>
-          <textarea id="text-input" rows="5"
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="text-xs font-semibold text-slate-500">Văn bản tiếng Việt</label>
+            <span id="char-count" class="text-xs text-slate-400">0 ký tự</span>
+          </div>
+          <textarea id="text-input" rows="5" oninput="updateCharCount()"
             class="form-input resize-none text-sm"
-            placeholder="Nhập bài đăng Facebook, comment, tweet tiếng Việt..."></textarea>
+            placeholder="Nhập bài đăng Facebook, comment, tweet tiếng Việt... Model tự động chuẩn hoá teencode trước khi phân tích."></textarea>
         </div>
 
-        <div class="grid grid-cols-3 gap-3 mb-3">
-          <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Likes</label>
-            <input type="number" id="likes" min="0" value="0" class="form-input text-sm">
+        <!-- Tabular features -->
+        <div class="mb-3">
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="text-xs font-semibold text-slate-500">Tương tác bài đăng</label>
+            <div class="flex gap-1.5">
+              <button onclick="setTabular(0,0,0)" class="tag bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer">Không tương tác</button>
+              <button onclick="setTabular(50,10,5)" class="tag bg-blue-100 text-blue-700 hover:bg-blue-200 cursor-pointer">Bình thường</button>
+              <button onclick="setTabular(5000,800,300)" class="tag bg-orange-100 text-orange-700 hover:bg-orange-200 cursor-pointer">🔥 Viral</button>
+              <button onclick="setTabular(100,2000,50)" class="tag bg-violet-100 text-violet-700 hover:bg-violet-200 cursor-pointer">💬 Tranh luận</button>
+            </div>
           </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Comments</label>
-            <input type="number" id="comments" min="0" value="0" class="form-input text-sm">
+          <div class="grid grid-cols-3 gap-3">
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">👍 Likes</label>
+              <input type="number" id="likes" min="0" value="0" class="form-input text-sm">
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">💬 Comments</label>
+              <input type="number" id="comments" min="0" value="0" class="form-input text-sm">
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">🔁 Shares</label>
+              <input type="number" id="shares" min="0" value="0" class="form-input text-sm">
+            </div>
           </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Shares</label>
-            <input type="number" id="shares" min="0" value="0" class="form-input text-sm">
-          </div>
+          <p class="text-xs text-slate-400 mt-1.5">Thử đổi preset để thấy tabular features ảnh hưởng đến dự đoán.</p>
         </div>
 
-        <label class="flex items-center gap-2.5 mb-4 cursor-pointer select-none">
-          <input type="checkbox" id="use-lime" checked class="w-4 h-4 rounded accent-indigo-600">
-          <span class="text-sm font-medium text-slate-700">Kèm giải thích LIME</span>
-          <span class="text-xs text-slate-400">(~10–15 giây)</span>
-        </label>
+        <div class="flex items-center justify-between">
+          <label class="flex items-center gap-2.5 cursor-pointer select-none">
+            <input type="checkbox" id="use-lime" checked class="w-4 h-4 rounded accent-indigo-600">
+            <span class="text-sm font-medium text-slate-700">Kèm giải thích LIME</span>
+            <span class="text-xs text-slate-400">(~15 giây)</span>
+          </label>
+          <button onclick="clearHistory()" class="text-xs text-slate-400 hover:text-slate-600 underline">Xoá lịch sử</button>
+        </div>
 
-        <button onclick="runPredict()" id="predict-btn" class="btn-primary flex items-center justify-center gap-2">
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
+        <button onclick="runPredict()" id="predict-btn" class="btn-primary flex items-center justify-center gap-2 mt-4">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>
           Phân tích cảm xúc
         </button>
+      </div>
+
+      <!-- Teencode preview -->
+      <div id="teencode-note" class="hidden card bg-amber-50 border border-amber-200">
+        <div class="flex items-start gap-2">
+          <span class="text-lg flex-shrink-0">⚙️</span>
+          <div>
+            <div class="text-xs font-semibold text-amber-800 mb-1">Chuẩn hoá Teencode tự động</div>
+            <p class="text-xs text-amber-700 leading-relaxed">Model áp dụng <strong>170+ quy tắc</strong> trước khi encode: viết tắt (mk→mình, k→không, lun→luôn), emoji→text (😊→cười), tiếng lóng, từ ghép. Giúp XLM-R tokenize chính xác hơn trên văn bản mạng xã hội.</p>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -427,7 +495,7 @@
           <svg class="w-6 h-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>
         </div>
         <p class="text-sm font-semibold text-slate-500">Kết quả sẽ hiển thị ở đây</p>
-        <p class="text-xs text-slate-400 mt-1">Nhập văn bản và nhấn Phân tích</p>
+        <p class="text-xs text-slate-400 mt-1">Chọn ví dụ hoặc nhập văn bản rồi nhấn Phân tích</p>
       </div>
 
       <!-- Loading -->
@@ -438,7 +506,8 @@
 
       <!-- Result card -->
       <div id="result-card" class="hidden card result-card">
-        <div class="flex items-start justify-between gap-3 mb-4">
+        <!-- Header -->
+        <div class="flex items-start justify-between gap-3 mb-3">
           <div class="flex items-center gap-3">
             <span id="result-emoji" class="text-3xl leading-none"></span>
             <div>
@@ -451,7 +520,24 @@
             <div class="text-xs text-slate-400 mt-1">confidence</div>
           </div>
         </div>
-        <div class="space-y-2.5" id="conf-bars"></div>
+
+        <!-- Uncertainty meter -->
+        <div id="uncertainty-box" class="rounded-lg px-3 py-2 mb-3 text-xs font-medium flex items-center gap-2"></div>
+
+        <!-- Runner-up -->
+        <div id="runnerup-box" class="hidden bg-slate-50 rounded-lg px-3 py-2 mb-3 text-xs text-slate-600 flex items-center justify-between">
+          <span>Khả năng thứ 2:</span>
+          <span id="runnerup-label" class="font-semibold"></span>
+        </div>
+
+        <!-- Confidence bars -->
+        <div class="space-y-2" id="conf-bars"></div>
+
+        <!-- Meta -->
+        <div class="flex items-center justify-between mt-3 pt-3 border-t border-slate-100 text-xs text-slate-400">
+          <span id="result-time"></span>
+          <span id="result-chars"></span>
+        </div>
       </div>
 
       <!-- Error -->
@@ -467,17 +553,17 @@
   <!-- LIME explanation -->
   <div id="lime-section" class="hidden card">
     <div class="flex items-center justify-between mb-1">
-      <div class="section-title" style="margin-bottom:0">LIME Token Attribution</div>
+      <div class="section-title" style="margin-bottom:0">LIME Token Attribution — Giải thích dự đoán</div>
       <div class="flex items-center gap-3 text-xs text-slate-400">
         <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded bg-emerald-200"></span> Ủng hộ nhãn</span>
         <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded bg-red-200"></span> Phản đối nhãn</span>
       </div>
     </div>
-    <p class="text-xs text-slate-400 mb-4">Độ đậm màu tỷ lệ thuận với mức độ đóng góp của token</p>
+    <p class="text-xs text-slate-400 mb-4">LIME tạo ~150 biến thể ngẫu nhiên, đo thay đổi xác suất khi xoá từng token — độ đậm tỷ lệ thuận với mức đóng góp.</p>
 
     <div id="lime-loading" class="flex items-center gap-3 py-4">
       <div class="spinner"></div>
-      <span class="text-sm text-slate-400">Đang tính LIME attribution (~150 samples)...</span>
+      <span class="text-sm text-slate-400">Đang tính LIME attribution (~150 samples perturbation)...</span>
     </div>
 
     <div id="lime-content" class="hidden">
@@ -489,13 +575,40 @@
               <th>Token</th>
               <th class="text-right">LIME Weight</th>
               <th>Ảnh hưởng</th>
+              <th>Giải thích</th>
             </tr>
           </thead>
           <tbody id="lime-tbody"></tbody>
         </table>
       </div>
+      <p class="text-xs text-slate-400 mt-2">Chỉ hiển thị token có |weight| &gt; 0.01. LIME là model-agnostic — hoạt động trên toàn pipeline (Teencode → XLM-R → Fusion → Softmax).</p>
     </div>
   </div>
+
+  <!-- Prediction history -->
+  <div id="history-section" class="hidden card">
+    <div class="flex items-center justify-between mb-3">
+      <div class="section-title" style="margin-bottom:0">Lịch sử dự đoán — So sánh các lần chạy</div>
+      <span class="text-xs text-slate-400">Tối đa 8 lần gần nhất</span>
+    </div>
+    <div class="overflow-x-auto -mx-5 px-5">
+      <table class="data-table" id="history-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Văn bản (tóm tắt)</th>
+            <th class="text-center">Likes</th>
+            <th class="text-center">Kết quả</th>
+            <th class="text-right">Confidence</th>
+            <th class="text-center">Độ chắc chắn</th>
+            <th class="text-right">Thời gian</th>
+          </tr>
+        </thead>
+        <tbody id="history-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
 </div><!-- /tab-demo -->
 
 
@@ -1379,9 +1492,60 @@ async function checkHealth() {
 checkHealth();
 
 // ── Fill example ──
-function fillExample() {
-  const v = document.getElementById('example-select').value;
-  if (v) document.getElementById('text-input').value = v;
+function fillExample(val, _cat) {
+  if (!val) return;
+  try {
+    const obj = JSON.parse(val);
+    document.getElementById('text-input').value = obj.text || '';
+    document.getElementById('likes').value    = obj.likes    ?? 0;
+    document.getElementById('comments').value = obj.comments ?? 0;
+    document.getElementById('shares').value   = obj.shares   ?? 0;
+    updateCharCount();
+    // Show teencode note for teencode/edge categories
+    const hasTeen = /mk|bùn|lun|vcl|éo|k bt|pik/i.test(obj.text || '');
+    document.getElementById('teencode-note').classList.toggle('hidden', !hasTeen);
+  } catch { document.getElementById('text-input').value = val; }
+}
+
+// ── Tabular presets ──
+function setTabular(l, c, s) {
+  document.getElementById('likes').value    = l;
+  document.getElementById('comments').value = c;
+  document.getElementById('shares').value   = s;
+}
+
+// ── Char count ──
+function updateCharCount() {
+  const n = document.getElementById('text-input').value.length;
+  const el = document.getElementById('char-count');
+  el.textContent = n + ' ký tự';
+  el.className = 'text-xs ' + (n > 500 ? 'text-orange-500' : n > 128 ? 'text-amber-500' : 'text-slate-400');
+}
+
+// ── Prediction history ──
+let _history = [];
+function addToHistory(text, likes, label, conf, gap, ms) {
+  _history.unshift({ text, likes, label, conf, gap, ms, t: new Date() });
+  if (_history.length > 8) _history.pop();
+  renderHistory();
+}
+function clearHistory() { _history = []; hide('history-section'); }
+function renderHistory() {
+  if (!_history.length) return;
+  const certLabel = gap => gap > 0.5 ? '🟢 Rất chắc' : gap > 0.25 ? '🟡 Khá chắc' : gap > 0.1 ? '🟠 Tương đối' : '🔴 Không chắc';
+  document.getElementById('history-tbody').innerHTML = _history.map((h, i) => {
+    const m = EMO[h.label] || { emoji:'?', vi: h.label };
+    return `<tr>
+      <td class="mono text-slate-400 text-xs">${_history.length - i}</td>
+      <td class="text-xs text-slate-600 max-w-xs truncate" title="${h.text.replace(/"/g,'&quot;')}">${h.text.slice(0,55)}${h.text.length>55?'…':''}</td>
+      <td class="text-center text-xs text-slate-400">${h.likes > 0 ? h.likes.toLocaleString() : '—'}</td>
+      <td class="text-center"><span class="font-semibold">${m.emoji} ${m.vi}</span></td>
+      <td class="text-right mono font-bold" style="color:${(EMO[h.label]||{}).color||'#333'}">${(h.conf*100).toFixed(1)}%</td>
+      <td class="text-center text-xs">${certLabel(h.gap)}</td>
+      <td class="text-right mono text-xs text-slate-400">${h.ms}ms</td>
+    </tr>`;
+  }).join('');
+  show('history-section');
 }
 
 // ── Single predict ──
@@ -1393,15 +1557,13 @@ async function runPredict() {
   const comments = +document.getElementById('comments').value || 0;
   const shares   = +document.getElementById('shares').value   || 0;
 
-  const payload = { text, num_features: {} };
-  if (likes)    payload.num_features.likes    = likes;
-  if (comments) payload.num_features.comments = comments;
-  if (shares)   payload.num_features.shares   = shares;
+  const payload = { text, num_features: { likes, comments, shares } };
 
   hide('result-placeholder'); hide('result-card'); hide('result-error'); hide('lime-section');
   showLoad('result-loading', 'loading-text', 'Đang phân tích...');
   document.getElementById('predict-btn').disabled = true;
 
+  const t0 = Date.now();
   let data;
   try {
     const resp = await fetch('/predict', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
@@ -1413,15 +1575,16 @@ async function runPredict() {
     document.getElementById('predict-btn').disabled = false;
     return;
   }
+  const ms = Date.now() - t0;
 
   hide('result-loading');
-  renderResult(data);
+  renderResult(data, text, ms, likes);
   document.getElementById('predict-btn').disabled = false;
 
   if (document.getElementById('use-lime').checked) runLime(text);
 }
 
-function renderResult(data) {
+function renderResult(data, text, ms, likes) {
   const m = EMO[data.label] || { vi: data.label, emoji:'?', color:'#64748b', bg:'#f1f5f9' };
   const pct = (data.confidence * 100).toFixed(1);
 
@@ -1432,7 +1595,26 @@ function renderResult(data) {
   document.getElementById('result-conf').style.color     = m.color;
   document.getElementById('result-card').style.borderLeftColor = m.color;
 
+  // Uncertainty meter
   const sorted = ORDER.slice().sort((a,b) => (data.probs[b]||0) - (data.probs[a]||0));
+  const top1 = data.probs[sorted[0]] || 0;
+  const top2 = data.probs[sorted[1]] || 0;
+  const gap = top1 - top2;
+  const ubox = document.getElementById('uncertainty-box');
+  if (gap > 0.5)       ubox.className = 'rounded-lg px-3 py-2 mb-3 text-xs font-medium flex items-center gap-2 bg-emerald-50 text-emerald-700 border border-emerald-200', ubox.innerHTML = '🟢 <strong>Rất chắc chắn</strong> — Model phân biệt rõ ràng (gap=' + (gap*100).toFixed(0) + '%)';
+  else if (gap > 0.25) ubox.className = 'rounded-lg px-3 py-2 mb-3 text-xs font-medium flex items-center gap-2 bg-blue-50 text-blue-700 border border-blue-200',    ubox.innerHTML = '🟡 <strong>Khá chắc chắn</strong> — Dự đoán ổn định (gap=' + (gap*100).toFixed(0) + '%)';
+  else if (gap > 0.1)  ubox.className = 'rounded-lg px-3 py-2 mb-3 text-xs font-medium flex items-center gap-2 bg-amber-50 text-amber-700 border border-amber-200',   ubox.innerHTML = '🟠 <strong>Tương đối chắc</strong> — Nên xem xét nhãn thứ 2 (gap=' + (gap*100).toFixed(0) + '%)';
+  else                 ubox.className = 'rounded-lg px-3 py-2 mb-3 text-xs font-medium flex items-center gap-2 bg-red-50 text-red-600 border border-red-200',         ubox.innerHTML = '🔴 <strong>Không chắc chắn</strong> — Văn bản mơ hồ hoặc cảm xúc hỗn hợp (gap=' + (gap*100).toFixed(0) + '%)';
+
+  // Runner-up
+  const rup = sorted[1];
+  if (rup && gap < 0.4) {
+    const rm = EMO[rup] || { emoji:'?', vi: rup };
+    document.getElementById('runnerup-label').innerHTML = `${rm.emoji} ${rm.vi} <span class="mono text-slate-400">${((top2)*100).toFixed(1)}%</span>`;
+    show('runnerup-box');
+  } else { hide('runnerup-box'); }
+
+  // Confidence bars
   document.getElementById('conf-bars').innerHTML = sorted.map(cls => {
     const e = EMO[cls], p = ((data.probs[cls]||0)*100).toFixed(1);
     const isBest = cls === data.label;
@@ -1445,7 +1627,14 @@ function renderResult(data) {
     </div>`;
   }).join('');
 
+  // Meta
+  if (ms) document.getElementById('result-time').textContent = `⏱ ${ms}ms`;
+  if (text) document.getElementById('result-chars').textContent = `${text.length} ký tự`;
+
   show('result-card');
+
+  // Add to history
+  if (text && ms) addToHistory(text, likes, data.label, data.confidence, gap, ms);
 }
 
 async function runLime(text) {
@@ -1469,16 +1658,19 @@ async function runLime(text) {
   const exp = data.explanation;
   document.getElementById('lime-display').innerHTML = exp.highlight_html || '<em class="text-slate-400">Không có dữ liệu</em>';
 
-  const tokens = (exp.tokens||[]).slice().sort((a,b)=>Math.abs(b[1])-Math.abs(a[1])).slice(0,10);
+  const tokens = (exp.tokens||[]).slice().sort((a,b)=>Math.abs(b[1])-Math.abs(a[1])).slice(0,12);
   document.getElementById('lime-tbody').innerHTML = tokens.map(([tok, w]) => {
     const isPos = w > 0;
+    const absW = Math.abs(w);
     const dir = isPos
-      ? `<span class="tag bg-emerald-50 text-emerald-700">+${data.label}</span>`
-      : `<span class="tag bg-red-50 text-red-600">−${data.label}</span>`;
+      ? `<span class="tag bg-emerald-50 text-emerald-700">✓ Ủng hộ <em>${data.label}</em></span>`
+      : `<span class="tag bg-red-50 text-red-600">✗ Phản đối <em>${data.label}</em></span>`;
+    const strength = absW > 0.1 ? '🔴 Mạnh' : absW > 0.05 ? '🟡 Trung bình' : '⚪ Yếu';
     return `<tr>
-      <td class="mono">${tok}</td>
-      <td class="text-right mono ${isPos?'text-emerald-600':'text-red-500'} font-semibold">${w.toFixed(4)}</td>
+      <td class="mono font-semibold">${tok}</td>
+      <td class="text-right mono ${isPos?'text-emerald-600':'text-red-500'} font-bold">${isPos?'+':''}${w.toFixed(4)}</td>
       <td>${dir}</td>
+      <td class="text-xs text-slate-400">${strength}</td>
     </tr>`;
   }).join('');
 
