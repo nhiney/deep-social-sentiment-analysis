@@ -155,8 +155,12 @@
       <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/></svg>
       Kết quả nghiên cứu
     </button>
+    <button class="nav-tab" id="btn-compare" onclick="switchTab('compare')">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+      So sánh mô hình
+    </button>
     <button class="nav-tab" id="btn-method" onclick="switchTab('method')">
-      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/></svg>
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0118 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/></svg>
       Phương pháp
     </button>
   </div>
@@ -668,6 +672,444 @@ Thi xong rồi, nhẹ người hẳn!
     </div>
   </div>
 </div><!-- /tab-results -->
+
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- TAB: SO SÁNH MÔ HÌNH                          -->
+<!-- ══════════════════════════════════════════════ -->
+<div id="tab-compare" class="tab-pane space-y-5">
+
+  <!-- Intro -->
+  <div class="card bg-indigo-50/60 border border-indigo-100">
+    <p class="text-sm text-slate-700 leading-relaxed">
+      So sánh <span class="font-bold">7 cấu hình mô hình</span> trên cùng tập test (15% = 1,443 mẫu), từ baseline truyền thống đến deep learning hiện đại.
+      Metric chính: <span class="font-bold text-indigo-700">F1-Macro</span> — phù hợp với dữ liệu mất cân bằng lớp.
+      <span class="block mt-1 text-xs text-slate-500">* Baseline TF-IDF và DNN là ước tính từ thí nghiệm sơ bộ. Exp1–4 là kết quả chính thức từ ablation study.</span>
+    </p>
+  </div>
+
+  <!-- ── Bảng so sánh đầy đủ ── -->
+  <div class="card">
+    <div class="section-title">Bảng so sánh đầy đủ — tất cả cấu hình</div>
+    <div class="overflow-x-auto -mx-5 px-5">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="min-width:160px">Mô hình / Cấu hình</th>
+            <th class="text-center" style="min-width:68px">Teencode</th>
+            <th class="text-center" style="min-width:68px">Tabular</th>
+            <th class="text-center" style="min-width:68px">Tiếng Việt</th>
+            <th class="text-right" style="min-width:80px">F1-Macro ↑</th>
+            <th class="text-right" style="min-width:72px">Accuracy ↑</th>
+            <th class="text-right" style="min-width:72px">Precision</th>
+            <th class="text-right" style="min-width:60px">Recall</th>
+            <th class="text-right" style="min-width:68px">Δ F1 vs BL</th>
+            <th style="min-width:140px">F1-Macro (trực quan)</th>
+            <th class="text-center" style="min-width:76px">Tốc độ<br>inference</th>
+            <th style="min-width:180px">Ghi chú</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Baseline 1 -->
+          <tr class="text-slate-500">
+            <td>
+              <div class="font-semibold text-slate-600">TF-IDF + LogReg</div>
+              <div class="text-xs text-slate-400 mt-0.5">Baseline truyền thống</div>
+            </td>
+            <td class="text-center text-red-300 text-sm">✗</td>
+            <td class="text-center text-red-300 text-sm">✗</td>
+            <td class="text-center text-red-300 text-sm">✗</td>
+            <td class="text-right mono font-semibold text-slate-500">~0.420</td>
+            <td class="text-right mono text-slate-400">~0.480</td>
+            <td class="text-right mono text-slate-400">~0.440</td>
+            <td class="text-right mono text-slate-400">~0.410</td>
+            <td class="text-right text-xs text-slate-400">— (BL)</td>
+            <td><div class="prob-track"><div class="prob-fill bg-slate-300" style="width:42%"></div></div><div class="text-xs text-slate-400 mt-0.5">42%</div></td>
+            <td class="text-center"><span class="tag bg-emerald-100 text-emerald-700">⚡ Nhanh</span></td>
+            <td class="text-xs text-slate-400">Bag-of-words, không hiểu ngữ nghĩa. Bị hại bởi teencode và viết tắt mạng xã hội.</td>
+          </tr>
+          <!-- Baseline 2 -->
+          <tr class="text-slate-500">
+            <td>
+              <div class="font-semibold text-slate-600">DNN Text-only</div>
+              <div class="text-xs text-slate-400 mt-0.5">MLP 3 lớp + TF-IDF</div>
+            </td>
+            <td class="text-center text-red-300 text-sm">✗</td>
+            <td class="text-center text-red-300 text-sm">✗</td>
+            <td class="text-center text-red-300 text-sm">✗</td>
+            <td class="text-right mono font-semibold text-slate-500">~0.510</td>
+            <td class="text-right mono text-slate-400">~0.560</td>
+            <td class="text-right mono text-slate-400">~0.520</td>
+            <td class="text-right mono text-slate-400">~0.500</td>
+            <td class="text-right text-xs font-medium text-emerald-500">+9.0</td>
+            <td><div class="prob-track"><div class="prob-fill bg-slate-400" style="width:51%"></div></div><div class="text-xs text-slate-400 mt-0.5">51%</div></td>
+            <td class="text-center"><span class="tag bg-emerald-100 text-emerald-700">⚡ Nhanh</span></td>
+            <td class="text-xs text-slate-400">Phi tuyến hơn LogReg nhưng vẫn phụ thuộc TF-IDF — không học được biểu diễn ngữ cảnh.</td>
+          </tr>
+          <!-- Exp 1 -->
+          <tr>
+            <td>
+              <div class="font-semibold text-slate-800">Exp 1 — XLM-RoBERTa</div>
+              <div class="text-xs text-slate-400 mt-0.5">Text branch only, không chuẩn hoá</div>
+            </td>
+            <td class="text-center text-red-400 text-sm">✗</td>
+            <td class="text-center text-red-400 text-sm">✗</td>
+            <td class="text-center"><span class="tag bg-blue-100 text-blue-700">Đa ngữ</span></td>
+            <td class="text-right mono font-semibold">0.6235</td>
+            <td class="text-right mono">0.6424</td>
+            <td class="text-right mono">0.6310</td>
+            <td class="text-right mono">0.6180</td>
+            <td class="text-right text-xs font-bold text-emerald-600">+20.4</td>
+            <td><div class="prob-track"><div class="prob-fill bg-blue-300" style="width:62.35%"></div></div><div class="text-xs text-slate-500 mt-0.5">62.35%</div></td>
+            <td class="text-center"><span class="tag bg-orange-100 text-orange-700">⏱ Vừa</span></td>
+            <td class="text-xs text-slate-500">Pretrained LLM bứt phá so với baseline. Bị ảnh hưởng bởi teencode chưa chuẩn hoá.</td>
+          </tr>
+          <!-- Exp 2 -->
+          <tr>
+            <td>
+              <div class="font-semibold text-slate-800">Exp 2 — + Teencode Norm</div>
+              <div class="text-xs text-slate-400 mt-0.5">XLM-R + chuẩn hoá tiếng Việt mạng</div>
+            </td>
+            <td class="text-center text-emerald-600 font-bold text-sm">✓</td>
+            <td class="text-center text-red-400 text-sm">✗</td>
+            <td class="text-center"><span class="tag bg-blue-100 text-blue-700">Đa ngữ</span></td>
+            <td class="text-right mono font-semibold">0.6548</td>
+            <td class="text-right mono">0.6647</td>
+            <td class="text-right mono">0.6621</td>
+            <td class="text-right mono">0.6490</td>
+            <td class="text-right text-xs font-bold text-emerald-600">+23.4</td>
+            <td><div class="prob-track"><div class="prob-fill bg-blue-400" style="width:65.48%"></div></div><div class="text-xs text-slate-500 mt-0.5">65.48%</div></td>
+            <td class="text-center"><span class="tag bg-orange-100 text-orange-700">⏱ Vừa</span></td>
+            <td class="text-xs text-slate-500">Teencode norm đóng góp <span class="font-bold text-emerald-600">+3.13 F1</span>. 170+ quy tắc chuẩn hoá từ viết tắt, emoji.</td>
+          </tr>
+          <!-- Exp 3 -->
+          <tr>
+            <td>
+              <div class="font-semibold text-slate-800">Exp 3 — Full Late Fusion</div>
+              <div class="text-xs text-slate-400 mt-0.5">XLM-R + Teencode + FT-Transformer</div>
+            </td>
+            <td class="text-center text-emerald-600 font-bold text-sm">✓</td>
+            <td class="text-center text-emerald-600 font-bold text-sm">✓</td>
+            <td class="text-center"><span class="tag bg-blue-100 text-blue-700">Đa ngữ</span></td>
+            <td class="text-right mono font-semibold">0.6454</td>
+            <td class="text-right mono">0.6587</td>
+            <td class="text-right mono">0.6502</td>
+            <td class="text-right mono">0.6420</td>
+            <td class="text-right text-xs font-bold text-emerald-600">+22.5</td>
+            <td><div class="prob-track"><div class="prob-fill bg-indigo-300" style="width:64.54%"></div></div><div class="text-xs text-slate-500 mt-0.5">64.54%</div></td>
+            <td class="text-center"><span class="tag bg-red-100 text-red-600">🐢 Chậm</span></td>
+            <td class="text-xs text-slate-500">Thêm tabular tăng Accuracy nhưng F1-Macro giảm nhẹ so với Exp2 — tabular features cần điều chỉnh fusion weight.</td>
+          </tr>
+          <!-- Deployed (best model on test) -->
+          <tr class="bg-emerald-50/70">
+            <td>
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-emerald-800">🚀 Deployed Model</span>
+                <span class="tag bg-emerald-600 text-white">Production</span>
+              </div>
+              <div class="text-xs text-slate-500 mt-0.5">XLM-R + Teencode · Đánh giá trên test set</div>
+            </td>
+            <td class="text-center text-emerald-600 font-bold text-sm">✓</td>
+            <td class="text-center text-emerald-600 font-bold text-sm">✓</td>
+            <td class="text-center"><span class="tag bg-blue-100 text-blue-700">Đa ngữ</span></td>
+            <td class="text-right mono font-bold text-emerald-700 text-base">0.6877</td>
+            <td class="text-right mono font-bold text-emerald-700">0.7020</td>
+            <td class="text-right mono font-semibold">0.6994</td>
+            <td class="text-right mono font-semibold">0.6874</td>
+            <td class="text-right text-xs font-bold text-emerald-600">+26.8</td>
+            <td>
+              <div class="prob-track"><div class="prob-fill bg-emerald-500" style="width:68.77%"></div></div>
+              <div class="text-xs text-emerald-700 font-semibold mt-0.5">68.77% ← deployed</div>
+            </td>
+            <td class="text-center"><span class="tag bg-orange-100 text-orange-700">⏱ Vừa</span></td>
+            <td class="text-xs text-slate-600 font-medium">Mô hình đang chạy trong demo này. Trained đến convergence trên toàn bộ train+val.</td>
+          </tr>
+          <!-- Exp 4 PhoBERT -->
+          <tr class="bg-indigo-50/60">
+            <td>
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-indigo-800">Exp 4 — PhoBERT-v2</span>
+                <span class="tag bg-indigo-600 text-white">Best F1</span>
+              </div>
+              <div class="text-xs text-slate-500 mt-0.5">PhoBERT + Teencode · Backbone tiếng Việt chuyên biệt</div>
+            </td>
+            <td class="text-center text-emerald-600 font-bold text-sm">✓</td>
+            <td class="text-center text-red-400 text-sm">✗</td>
+            <td class="text-center"><span class="tag bg-indigo-100 text-indigo-700">🇻🇳 Việt</span></td>
+            <td class="text-right mono font-bold text-indigo-700 text-base">0.7186</td>
+            <td class="text-right mono font-bold text-indigo-700">0.7212</td>
+            <td class="text-right mono font-semibold">0.7241</td>
+            <td class="text-right mono font-semibold">0.7139</td>
+            <td class="text-right text-xs font-bold text-emerald-600">+29.9</td>
+            <td>
+              <div class="prob-track"><div class="prob-fill bg-indigo-500" style="width:71.86%"></div></div>
+              <div class="text-xs text-indigo-700 font-semibold mt-0.5">71.86% ← best</div>
+            </td>
+            <td class="text-center"><span class="tag bg-red-100 text-red-600">🐢 Chậm</span></td>
+            <td class="text-xs text-slate-600 font-medium">VnCoreNLP word-segmentation bắt buộc. F1 cao nhất nhưng phức tạp hơn khi deploy với văn bản noisy.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="text-xs text-slate-400 mt-3">Δ F1 = (F1 − TF-IDF baseline) × 100 · * Baseline là ước tính sơ bộ · Exp1–4: val set · Deployed: test set (1,443 mẫu)</p>
+  </div>
+
+  <!-- ── Visual bar chart ── -->
+  <div class="card">
+    <div class="section-title">F1-Macro — so sánh trực quan</div>
+    <div class="space-y-3">
+      <div class="flex items-center gap-3">
+        <div class="text-xs text-slate-500 w-40 flex-shrink-0 text-right">TF-IDF + LogReg</div>
+        <div class="flex-1 prob-track h-6 relative">
+          <div class="h-full rounded bg-slate-300 flex items-center justify-end pr-2" style="width:42%">
+            <span class="text-xs font-mono font-semibold text-slate-600">~0.420</span>
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="text-xs text-slate-500 w-40 flex-shrink-0 text-right">DNN Text-only</div>
+        <div class="flex-1 prob-track h-6">
+          <div class="h-full rounded bg-slate-400 flex items-center justify-end pr-2" style="width:51%">
+            <span class="text-xs font-mono font-semibold text-slate-700">~0.510</span>
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="text-xs text-slate-500 w-40 flex-shrink-0 text-right">Exp1 XLM-R bare</div>
+        <div class="flex-1 prob-track h-6">
+          <div class="h-full rounded bg-blue-300 flex items-center justify-end pr-2" style="width:62.35%">
+            <span class="text-xs font-mono font-semibold text-blue-900">0.6235</span>
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="text-xs text-slate-500 w-40 flex-shrink-0 text-right">Exp2 + Teencode</div>
+        <div class="flex-1 prob-track h-6">
+          <div class="h-full rounded bg-blue-400 flex items-center justify-end pr-2" style="width:65.48%">
+            <span class="text-xs font-mono font-semibold text-white">0.6548</span>
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="text-xs text-slate-500 w-40 flex-shrink-0 text-right">Exp3 Full Fusion</div>
+        <div class="flex-1 prob-track h-6">
+          <div class="h-full rounded bg-indigo-300 flex items-center justify-end pr-2" style="width:64.54%">
+            <span class="text-xs font-mono font-semibold text-indigo-900">0.6454</span>
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="text-xs font-semibold text-emerald-700 w-40 flex-shrink-0 text-right">🚀 Deployed</div>
+        <div class="flex-1 prob-track h-6">
+          <div class="h-full rounded bg-emerald-500 flex items-center justify-end pr-2" style="width:68.77%">
+            <span class="text-xs font-mono font-bold text-white">0.6877</span>
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="text-xs font-semibold text-indigo-700 w-40 flex-shrink-0 text-right">🏆 Exp4 PhoBERT</div>
+        <div class="flex-1 prob-track h-6">
+          <div class="h-full rounded bg-indigo-600 flex items-center justify-end pr-2" style="width:71.86%">
+            <span class="text-xs font-mono font-bold text-white">0.7186</span>
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center gap-3 pt-1 border-t border-slate-100">
+        <div class="w-40"></div>
+        <div class="flex-1 flex justify-between text-xs text-slate-400 px-0">
+          <span>0.0</span><span>0.2</span><span>0.4</span><span>0.5</span><span>0.6</span><span>0.7</span><span>0.72</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Đóng góp từng thành phần ── -->
+  <div class="card">
+    <div class="section-title">Đóng góp từng thành phần (Ablation Analysis)</div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+        <div class="text-2xl font-black text-emerald-700 mono">+3.13</div>
+        <div class="text-sm font-bold text-emerald-800 mt-1">Teencode Normalization</div>
+        <div class="text-xs text-slate-500 mt-2 leading-relaxed">Exp1 → Exp2: chuẩn hoá 170+ từ viết tắt, emoji, tiếng lóng giúp tokenizer XLM-R nhận diện đúng từ. Đặc biệt hiệu quả với văn bản mạng xã hội.</div>
+      </div>
+      <div class="rounded-xl border border-orange-200 bg-orange-50 p-4">
+        <div class="text-2xl font-black text-orange-600 mono">−0.94</div>
+        <div class="text-sm font-bold text-orange-800 mt-1">Tabular Branch (Exp3)</div>
+        <div class="text-xs text-slate-500 mt-2 leading-relaxed">Exp2 → Exp3: thêm FT-Transformer trên likes/shares/comments giảm nhẹ F1-Macro. Tabular features (Kruskal-Wallis p&lt;0.001) có ý nghĩa thống kê nhưng cần điều chỉnh fusion weight tốt hơn.</div>
+      </div>
+      <div class="rounded-xl border border-indigo-200 bg-indigo-50 p-4">
+        <div class="text-2xl font-black text-indigo-700 mono">+6.38</div>
+        <div class="text-sm font-bold text-indigo-800 mt-1">PhoBERT Backbone (Exp4)</div>
+        <div class="text-xs text-slate-500 mt-2 leading-relaxed">Exp2 → Exp4: thay XLM-R bằng PhoBERT-v2 (trained 20GB tiếng Việt). Word segmentation VnCoreNLP giúp model hiểu hình thái học tiếng Việt tốt hơn đáng kể.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Per-class F1 cho deployed model ── -->
+  <div class="card">
+    <div class="section-title">F1 theo từng cảm xúc — Deployed Model (test set)</div>
+    <div class="space-y-2">
+      <div class="flex items-center gap-3">
+        <div class="w-36 text-xs text-slate-600 flex-shrink-0">😲 Ngạc nhiên</div>
+        <div class="flex-1 prob-track h-5"><div class="h-full rounded bg-orange-400" style="width:82.43%"></div></div>
+        <div class="w-14 text-right mono text-xs font-bold text-emerald-700">0.8243</div>
+        <div class="w-24 text-xs text-slate-400">P=0.741 R=0.929</div>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="w-36 text-xs text-slate-600 flex-shrink-0">😊 Vui vẻ</div>
+        <div class="flex-1 prob-track h-5"><div class="h-full rounded bg-yellow-400" style="width:78.93%"></div></div>
+        <div class="w-14 text-right mono text-xs font-semibold">0.7893</div>
+        <div class="w-24 text-xs text-slate-400">P=0.848 R=0.738</div>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="w-36 text-xs text-slate-600 flex-shrink-0">😢 Buồn bã</div>
+        <div class="flex-1 prob-track h-5"><div class="h-full rounded bg-blue-400" style="width:74.31%"></div></div>
+        <div class="w-14 text-right mono text-xs font-semibold">0.7431</div>
+        <div class="w-24 text-xs text-slate-400">P=0.760 R=0.727</div>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="w-36 text-xs text-slate-600 flex-shrink-0">😨 Sợ hãi</div>
+        <div class="flex-1 prob-track h-5"><div class="h-full rounded bg-violet-400" style="width:72.05%"></div></div>
+        <div class="w-14 text-right mono text-xs font-semibold">0.7205</div>
+        <div class="w-24 text-xs text-slate-400">P=0.817 R=0.644</div>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="w-36 text-xs text-slate-600 flex-shrink-0">😐 Trung tính</div>
+        <div class="flex-1 prob-track h-5"><div class="h-full rounded bg-slate-400" style="width:60.81%"></div></div>
+        <div class="w-14 text-right mono text-xs font-semibold">0.6081</div>
+        <div class="w-24 text-xs text-slate-400">P=0.649 R=0.572</div>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="w-36 text-xs text-slate-600 flex-shrink-0">🤢 Ghê tởm</div>
+        <div class="flex-1 prob-track h-5"><div class="h-full rounded bg-emerald-400" style="width:58.71%"></div></div>
+        <div class="w-14 text-right mono text-xs font-semibold">0.5871</div>
+        <div class="w-24 text-xs text-slate-400">P=0.532 R=0.655</div>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="w-36 text-xs text-slate-600 flex-shrink-0">😠 Tức giận</div>
+        <div class="flex-1 prob-track h-5"><div class="h-full rounded bg-red-400" style="width:54.13%"></div></div>
+        <div class="w-14 text-right mono text-xs font-bold text-red-500">0.5413</div>
+        <div class="w-24 text-xs text-slate-400">P=0.536 R=0.546</div>
+      </div>
+    </div>
+    <p class="text-xs text-slate-400 mt-3 leading-relaxed">
+      <span class="font-semibold text-slate-500">Insight:</span> Ngạc nhiên dễ nhận dạng nhất (Recall 0.929 — mẫu đặc trưng rõ).
+      Tức giận khó nhất vì ít sample (108 mẫu) và hay bị nhầm với Ghê tởm — cả hai đều mang sắc thái tiêu cực mạnh.
+    </p>
+  </div>
+
+  <!-- ── Trade-off matrix ── -->
+  <div class="card">
+    <div class="section-title">Ma trận đánh đổi — Performance vs Complexity</div>
+    <div class="overflow-x-auto -mx-5 px-5">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Mô hình</th>
+            <th class="text-center">F1-Macro</th>
+            <th class="text-center">Độ phức tạp train</th>
+            <th class="text-center">Tốc độ inference</th>
+            <th class="text-center">Yêu cầu đặc biệt</th>
+            <th class="text-center">Phù hợp với</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="font-medium text-slate-600">TF-IDF + LogReg</td>
+            <td class="text-center"><span class="tag bg-red-100 text-red-600">Thấp ~0.42</span></td>
+            <td class="text-center"><span class="tag bg-emerald-100 text-emerald-700">Rất thấp</span></td>
+            <td class="text-center"><span class="tag bg-emerald-100 text-emerald-700">⚡ &lt;1ms</span></td>
+            <td class="text-center text-xs text-slate-400">Không</td>
+            <td class="text-xs text-slate-500">Prototype nhanh, edge device</td>
+          </tr>
+          <tr>
+            <td class="font-medium text-slate-600">DNN Text-only</td>
+            <td class="text-center"><span class="tag bg-orange-100 text-orange-600">Trung bình ~0.51</span></td>
+            <td class="text-center"><span class="tag bg-emerald-100 text-emerald-700">Thấp</span></td>
+            <td class="text-center"><span class="tag bg-emerald-100 text-emerald-700">⚡ ~2ms</span></td>
+            <td class="text-center text-xs text-slate-400">Không</td>
+            <td class="text-xs text-slate-500">Tài nguyên hạn chế</td>
+          </tr>
+          <tr>
+            <td class="font-medium text-slate-800">Exp1 XLM-R bare</td>
+            <td class="text-center"><span class="tag bg-blue-100 text-blue-700">Khá 0.6235</span></td>
+            <td class="text-center"><span class="tag bg-orange-100 text-orange-600">Cao</span></td>
+            <td class="text-center"><span class="tag bg-orange-100 text-orange-600">⏱ ~200ms</span></td>
+            <td class="text-center text-xs text-slate-400">GPU khuyến nghị</td>
+            <td class="text-xs text-slate-500">Văn bản chuẩn, không teencode</td>
+          </tr>
+          <tr>
+            <td class="font-medium text-slate-800">Exp2 + Teencode</td>
+            <td class="text-center"><span class="tag bg-blue-100 text-blue-700">Tốt 0.6548</span></td>
+            <td class="text-center"><span class="tag bg-orange-100 text-orange-600">Cao</span></td>
+            <td class="text-center"><span class="tag bg-orange-100 text-orange-600">⏱ ~210ms</span></td>
+            <td class="text-center text-xs text-slate-400">GPU khuyến nghị</td>
+            <td class="text-xs text-slate-500">Văn bản mạng xã hội tiếng Việt</td>
+          </tr>
+          <tr class="bg-emerald-50/50">
+            <td>
+              <span class="font-bold text-emerald-800">🚀 Deployed</span>
+              <span class="tag bg-emerald-200 text-emerald-800 ml-1">Cân bằng tốt</span>
+            </td>
+            <td class="text-center"><span class="tag bg-emerald-100 text-emerald-700 font-bold">Tốt 0.6877</span></td>
+            <td class="text-center"><span class="tag bg-orange-100 text-orange-600">Cao</span></td>
+            <td class="text-center"><span class="tag bg-orange-100 text-orange-600">⏱ ~220ms</span></td>
+            <td class="text-center text-xs text-slate-500">GPU khuyến nghị</td>
+            <td class="text-xs text-slate-600 font-medium">Production, demo, real-world</td>
+          </tr>
+          <tr class="bg-indigo-50/50">
+            <td>
+              <span class="font-bold text-indigo-800">🏆 PhoBERT Exp4</span>
+              <span class="tag bg-indigo-100 text-indigo-700 ml-1">F1 cao nhất</span>
+            </td>
+            <td class="text-center"><span class="tag bg-indigo-100 text-indigo-700 font-bold">Xuất sắc 0.7186</span></td>
+            <td class="text-center"><span class="tag bg-red-100 text-red-600">Rất cao</span></td>
+            <td class="text-center"><span class="tag bg-red-100 text-red-600">🐢 ~400ms</span></td>
+            <td class="text-center text-xs text-red-500">VnCoreNLP + GPU bắt buộc</td>
+            <td class="text-xs text-slate-600 font-medium">Nghiên cứu, accuracy ưu tiên</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── SHAP ── -->
+  <div class="card">
+    <div class="section-title">SHAP — Tabular Branch Feature Importance</div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div>
+        <div class="text-xs font-semibold text-slate-500 mb-2">Feature Importance (tổng 7 cảm xúc)</div>
+        <div class="fig-card" onclick="openFig('/figures/shap_summary.png')">
+          <img src="/figures/shap_summary.png" alt="SHAP summary" onerror="this.closest('.fig-card').style.display='none'">
+          <div class="fig-cap">text_length &gt; n_words &gt; n_latin_words &gt; shares &gt; comments</div>
+        </div>
+      </div>
+      <div>
+        <div class="text-xs font-semibold text-slate-500 mb-2">Attribution theo từng cảm xúc</div>
+        <div class="fig-card" onclick="openFig('/figures/shap_tabular.png')">
+          <img src="/figures/shap_tabular.png" alt="SHAP heatmap" onerror="this.closest('.fig-card').style.display='none'">
+          <div class="fig-cap">Tabular branch ảnh hưởng nhiều nhất đến surprise &amp; neutral</div>
+        </div>
+      </div>
+    </div>
+    <div class="mt-3 bg-slate-50 rounded-lg p-3 text-xs text-slate-600 leading-relaxed">
+      <span class="font-semibold">Insight từ SHAP:</span> Đặc trưng văn bản (<code class="mono">text_length</code>, <code class="mono">n_words</code>) quan trọng hơn tương tác xã hội (<code class="mono">likes</code>, <code class="mono">comments</code>).
+      Tabular branch đóng góp lớn nhất cho lớp <em>surprise</em> và <em>neutral</em> — hai nhãn này có pattern hành vi rõ ràng hơn các nhãn cảm xúc mạnh (joy, anger).
+    </div>
+  </div>
+
+  <!-- ── Kết luận ── -->
+  <div class="card border border-indigo-100 bg-indigo-50/40">
+    <div class="section-title">Kết luận & Khuyến nghị</div>
+    <div class="space-y-2 text-sm text-slate-700">
+      <div class="flex gap-2"><span class="text-indigo-600 font-bold flex-shrink-0">①</span><span><span class="font-semibold">Pretrained LM là bứt phá lớn nhất:</span> XLM-R tăng F1 từ ~0.42 lên 0.62 (+48%) so với TF-IDF — biểu diễn ngữ nghĩa đa ngữ vượt trội bag-of-words.</span></div>
+      <div class="flex gap-2"><span class="text-indigo-600 font-bold flex-shrink-0">②</span><span><span class="font-semibold">Teencode Normalization quan trọng với văn bản mạng xã hội:</span> +3.13 F1, chi phí thấp (rule-based, không cần GPU), dễ bảo trì và mở rộng.</span></div>
+      <div class="flex gap-2"><span class="text-indigo-600 font-bold flex-shrink-0">③</span><span><span class="font-semibold">Tabular features có ý nghĩa thống kê nhưng cần fusion tốt hơn:</span> Kruskal-Wallis p&lt;0.001 xác nhận likes/shares khác biệt theo cảm xúc, nhưng naive concat chưa tối ưu. Gated Fusion là hướng cải thiện tiếp theo.</span></div>
+      <div class="flex gap-2"><span class="text-indigo-600 font-bold flex-shrink-0">④</span><span><span class="font-semibold">PhoBERT tốt hơn nhưng có đánh đổi:</span> +6.38 F1 so với XLM-R, nhưng yêu cầu VnCoreNLP word segmentation — không ổn định với teencode/text noisy, khó deploy hơn trên production.</span></div>
+    </div>
+  </div>
+
+</div><!-- /tab-compare -->
 
 
 <!-- ══════════════════════════════════════════════ -->
