@@ -124,3 +124,10 @@ nosetests.xml
 *.tmp
 *.bak
 node_modules/
+
+# =========================
+# AI prompt / internal docs (local only)
+# =========================
+COLAB_PROMPT.md
+COLAB_GUIDE.md
+PROJECT_ANALYSIS.md
