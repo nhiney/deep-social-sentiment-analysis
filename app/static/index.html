@@ -1739,10 +1739,10 @@ async function runLime(text) {
 
 // ── Model compare ──
 const EXP_STYLE = {
-  exp1: { border:'#94a3b8', bg:'#f8fafc', badgeCls:'bg-slate-100 text-slate-600', f1Color:'#64748b' },
-  exp2: { border:'#3b82f6', bg:'#eff6ff', badgeCls:'bg-blue-100 text-blue-700',   f1Color:'#2563eb' },
-  exp3: { border:'#4f46e5', bg:'#eef2ff', badgeCls:'bg-indigo-100 text-indigo-700', f1Color:'#4f46e5' },
-  exp4: { border:'#7c3aed', bg:'#f5f3ff', badgeCls:'bg-violet-100 text-violet-700', f1Color:'#7c3aed' },
+  tfidf:        { border:'#94a3b8', bg:'#f8fafc', badgeCls:'bg-slate-100 text-slate-600', f1Color:'#64748b' },
+  xlmr:         { border:'#3b82f6', bg:'#eff6ff', badgeCls:'bg-blue-100 text-blue-700',   f1Color:'#2563eb' },
+  fttransformer:{ border:'#10b981', bg:'#f0fdf4', badgeCls:'bg-emerald-100 text-emerald-700', f1Color:'#059669' },
+  fusion:       { border:'#4f46e5', bg:'#eef2ff', badgeCls:'bg-indigo-100 text-indigo-700', f1Color:'#4f46e5' },
 };
 
 async function runCompare() {
@@ -1784,7 +1784,7 @@ function renderCompare(data) {
 
   // Render cards
   document.getElementById('compare-cards').innerHTML = data.results.map(r => {
-    const s = EXP_STYLE[r.exp_id] || EXP_STYLE.exp1;
+    const s = EXP_STYLE[r.model_id] || EXP_STYLE.tfidf;
     const tagBadges = (r.tags || []).map(t => {
       const special = t === 'Deployed' ? 'bg-indigo-600 text-white' : t === 'Best F1' ? 'bg-violet-600 text-white' : s.badgeCls;
       return `<span class="tag ${special} text-xs">${t}</span>`;
@@ -1792,7 +1792,6 @@ function renderCompare(data) {
 
     if (!r.available) {
       return `<div class="rounded-xl border-2 p-4 flex flex-col" style="border-color:${s.border};background:${s.bg}">
-        <div class="mono text-xs font-bold text-slate-400 mb-0.5">${r.exp_id.toUpperCase()}</div>
         <div class="font-bold text-slate-800 text-sm leading-tight mb-1">${r.model_name}</div>
         <div class="text-xs text-slate-500 mb-2">${r.backbone}</div>
         <div class="flex flex-wrap gap-1 mb-3">${tagBadges}</div>
@@ -1814,7 +1813,6 @@ function renderCompare(data) {
     const sorted = ORDER.filter(k => r.probs[k] != null).sort((a,b) => r.probs[b] - r.probs[a]);
 
     return `<div class="rounded-xl border-2 p-4 flex flex-col" style="border-color:${s.border};background:${s.bg}">
-      <div class="mono text-xs font-bold text-slate-400 mb-0.5">${r.exp_id.toUpperCase()}</div>
       <div class="font-bold text-slate-800 text-sm leading-tight mb-1">${r.model_name}</div>
       <div class="text-xs text-slate-500 mb-2">${r.backbone}</div>
       <div class="flex flex-wrap gap-1 mb-3">${tagBadges}</div>
@@ -1851,35 +1849,44 @@ function renderCompare(data) {
 
   // Summary insights
   const avail = data.results.filter(r => r.available);
-  const allSame = avail.every(r => r.label === avail[0].label);
-  const best = avail.reduce((a,b) => a.confidence > b.confidence ? a : b);
-  const exp1 = data.results.find(r => r.exp_id==='exp1');
-  const exp2 = data.results.find(r => r.exp_id==='exp2');
-  const exp3 = data.results.find(r => r.exp_id==='exp3');
+  const allSame = avail.length > 0 && avail.every(r => r.label === avail[0].label);
+  const best = avail.length > 0 ? avail.reduce((a,b) => a.confidence > b.confidence ? a : b) : null;
+  const mTfidf = data.results.find(r => r.model_id==='tfidf');
+  const mXlmr  = data.results.find(r => r.model_id==='xlmr');
+  const mFtT   = data.results.find(r => r.model_id==='fttransformer');
+  const mFusion= data.results.find(r => r.model_id==='fusion');
 
   let parts = [];
   if (allSame) {
-    parts.push(`✅ <strong>Tất cả ${avail.length} cấu hình đồng thuận:</strong> dự đoán ${EMO[avail[0].label]?.emoji} <strong>${EMO[avail[0].label]?.vi}</strong>`);
+    parts.push(`✅ <strong>Tất cả ${avail.length} mô hình đồng thuận:</strong> dự đoán ${EMO[avail[0].label]?.emoji} <strong>${EMO[avail[0].label]?.vi}</strong>`);
   } else {
     const labels = [...new Set(avail.map(r=>r.label))];
-    parts.push(`⚠️ <strong>Các cấu hình không đồng thuận:</strong> ${labels.map(l=>`${EMO[l]?.emoji} ${EMO[l]?.vi}`).join(' / ')}`);
+    parts.push(`⚠️ <strong>Các mô hình không đồng thuận:</strong> ${labels.map(l=>`${EMO[l]?.emoji} ${EMO[l]?.vi}`).join(' / ')}`);
   }
-  parts.push(`🏆 <strong>Tự tin nhất:</strong> ${best.model_name} (${(best.confidence*100).toFixed(1)}%)`);
+  if (best) parts.push(`🏆 <strong>Tự tin nhất:</strong> ${best.model_name} (${(best.confidence*100).toFixed(1)}%)`);
 
-  if (exp1?.available && exp2?.available) {
-    if (exp1.label !== exp2.label) {
-      parts.push(`🔄 <strong>Teencode đổi nhãn:</strong> ${EMO[exp1.label]?.vi} → ${EMO[exp2.label]?.vi}`);
+  // TF-IDF vs XLM-R
+  if (mTfidf?.available && mXlmr?.available) {
+    if (mTfidf.label !== mXlmr.label) {
+      parts.push(`🔄 <strong>Neural XLM-R đổi nhãn so với TF-IDF:</strong> ${EMO[mTfidf.label]?.vi} → ${EMO[mXlmr.label]?.vi}`);
     } else {
-      const diff = (exp2.confidence - exp1.confidence)*100;
-      parts.push(`✨ <strong>Teencode ${diff>=0?'tăng':'giảm'} confidence</strong> ${diff>=0?'+':''}${diff.toFixed(1)}%`);
+      const diff = (mXlmr.confidence - mTfidf.confidence)*100;
+      parts.push(`📈 <strong>XLM-R ${diff>=0?'tự tin hơn':'kém tự tin hơn'} TF-IDF</strong> ${diff>=0?'+':''}${diff.toFixed(1)}%`);
     }
   }
-  if (exp2?.available && exp3?.available) {
-    if (exp2.label !== exp3.label) {
-      parts.push(`📊 <strong>Tabular features đổi nhãn:</strong> ${EMO[exp2.label]?.vi} → ${EMO[exp3.label]?.vi}`);
+  // XLM-R vs FT-Transformer
+  if (mXlmr?.available && mFtT?.available) {
+    if (mXlmr.label !== mFtT.label) {
+      parts.push(`📊 <strong>Tabular-only dự đoán khác:</strong> ${EMO[mFtT.label]?.vi} vs Text-only ${EMO[mXlmr.label]?.vi}`);
+    }
+  }
+  // XLM-R vs Fusion
+  if (mXlmr?.available && mFusion?.available) {
+    const diff = (mFusion.confidence - mXlmr.confidence)*100;
+    if (mXlmr.label !== mFusion.label) {
+      parts.push(`🔀 <strong>Fusion đổi nhãn XLM-R:</strong> ${EMO[mXlmr.label]?.vi} → ${EMO[mFusion.label]?.vi}`);
     } else {
-      const diff = (exp3.confidence - exp2.confidence)*100;
-      parts.push(`📊 <strong>Tabular features ${diff>=0?'tăng':'giảm'} confidence</strong> ${diff>=0?'+':''}${diff.toFixed(1)}%`);
+      parts.push(`✨ <strong>Fusion ${diff>=0?'tăng':'giảm'} confidence so với XLM-R:</strong> ${diff>=0?'+':''}${diff.toFixed(1)}%`);
     }
   }
   document.getElementById('compare-summary').innerHTML = parts.join(' &nbsp;·&nbsp; ');

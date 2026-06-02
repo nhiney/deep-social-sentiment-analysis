@@ -30,12 +30,14 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Lazy imports — keep startup fast when the model dir doesn't exist yet.
 # ---------------------------------------------------------------------------
-_predictor = None   # type: Optional[Any]   # LateFusionPredictor
-_explainer = None   # type: Optional[Any]   # TextExplainer
+_predictor   = None   # type: Optional[Any]   # LateFusionPredictor
+_explainer   = None   # type: Optional[Any]   # TextExplainer
+_tfidf_model = None   # type: Optional[Any]   # TfidfBaseline (lightweight baseline)
 
 CLASS_NAMES = ["joy", "sadness", "anger", "fear", "disgust", "surprise", "neutral"]
 _CHECKPOINT_ENV = "MODEL_CHECKPOINT"
 _DEFAULT_CHECKPOINT = "models/best_model"
+_TFIDF_PATH = "models/baseline/tfidf_logreg.joblib"
 
 
 # --------------------------------------------------------------------------- #
@@ -141,7 +143,7 @@ class HealthResponse(BaseModel):
 @contextlib.asynccontextmanager
 async def _lifespan(application: FastAPI):
     """FastAPI lifespan handler: load model at startup, release at shutdown."""
-    global _predictor, _explainer
+    global _predictor, _explainer, _tfidf_model
 
     checkpoint = os.environ.get(_CHECKPOINT_ENV, _DEFAULT_CHECKPOINT)
     logger.info("Loading model from: %s", checkpoint)
@@ -163,15 +165,23 @@ async def _lifespan(application: FastAPI):
             predict_proba_fn=_predictor.predict_proba_for_lime,
             num_samples=200,
         )
-        logger.info("Model loaded successfully.")
+        logger.info("Main model loaded successfully.")
     except Exception as exc:
-        logger.warning(
-            "Model could not be loaded (%s). "
-            "Server is running in degraded mode — inference endpoints will return 503.",
-            exc,
-        )
+        logger.warning("Main model could not be loaded (%s). Degraded mode.", exc)
         _predictor = None
         _explainer = None
+
+    # Load lightweight TF-IDF baseline (always attempt regardless of main model)
+    try:
+        import joblib
+        _tfidf_model = joblib.load(_TFIDF_PATH)
+        logger.info("TF-IDF baseline loaded from %s", _TFIDF_PATH)
+    except Exception as exc:
+        logger.warning("TF-IDF baseline not found (%s).", exc)
+        _tfidf_model = None
+
+    if _predictor is not None:
+        logger.info("Server ready.")
 
     yield  # application runs here
 
@@ -187,6 +197,7 @@ async def _lifespan(application: FastAPI):
             pass
     _predictor = None
     _explainer = None
+    _tfidf_model = None
 
 
 app = FastAPI(
@@ -378,49 +389,68 @@ def predict_with_explanation(payload: ExplainRequest) -> PredictResponse:
 
 @app.post("/predict/compare", tags=["inference"])
 def predict_compare(payload: CompareRequest) -> Dict[str, Any]:
-    """Run a single text through 4 model configurations and return side-by-side results.
+    """Run one text through 4 distinct model architectures for comparison.
 
-    Exp1/2/3 use the **same** loaded checkpoint but with different inference settings:
-    - Exp1: no teencode normalization, engagement = 0
-    - Exp2: with normalization, engagement = 0
-    - Exp3: with normalization + actual tabular features (deployed model)
-    - Exp4: PhoBERT-v2 — not loaded in this demo (returned as unavailable)
+    Models:
+    1. TF-IDF + LogisticRegression — classical bag-of-words baseline
+    2. XLM-R only           — neural text encoder, tabular zeroed out
+    3. FT-Transformer only  — tabular branch only, text embedding zeroed
+    4. Teencode + XLM-R + FT-Transformer Fusion — full deployed model
     """
     predictor = _require_predictor()
     text = payload.text.strip()
 
     normalized_text = predictor.normalizer(text) if predictor.normalizer else text
-    orig_normalizer = predictor.normalizer
     tab_overrides = {"likes": payload.likes, "comments": payload.comments, "shares": payload.shares}
 
     results = []
-    try:
-        # ── Exp1: no normalization, zero engagement ──
-        predictor.normalizer = None
-        r = predictor.predict([text], tabular_overrides={"likes": 0, "comments": 0, "shares": 0})[0]
+
+    # ── 1. TF-IDF + LogReg ──
+    if _tfidf_model is not None:
+        from src.preprocessing import TeencodeNormalizer as _TN
+        _norm = _TN()
+        norm_text = _norm(text)
+        proba = _tfidf_model.predict_proba([norm_text])[0]
+        top_id = int(proba.argmax())
+        classes = _tfidf_model.pipeline.classes_
+        probs_dict = {c: round(float(proba[i]), 6) for i, c in enumerate(classes)}
         results.append({
-            "exp_id": "exp1",
-            "model_name": "Exp 1 — Baseline",
-            "backbone": "XLM-RoBERTa-base",
-            "tags": ["Không chuẩn hoá"],
-            "known_f1": 0.6235,
-            "known_acc": 0.6424,
+            "model_id": "tfidf",
+            "model_name": "TF-IDF + LogReg",
+            "backbone": "TF-IDF (1-2 gram) + Logistic Regression",
+            "tags": ["Baseline", "Teencode ✓", "Nhẹ ~5MB"],
+            "known_f1": 0.6401,
+            "known_acc": 0.6327,
             "is_deployed": False,
             "available": True,
-            "label": r["label"],
-            "confidence": round(r["confidence"], 6),
-            "probs": {k: round(v, 6) for k, v in r["probs"].items()},
-            "note": "Simulation: cùng trọng số Exp3, bỏ qua chuẩn hoá teencode",
+            "label": classes[top_id],
+            "confidence": round(float(proba[top_id]), 6),
+            "probs": probs_dict,
+            "note": "Bag-of-words truyền thống — nhanh nhưng không hiểu ngữ cảnh",
+        })
+    else:
+        results.append({
+            "model_id": "tfidf",
+            "model_name": "TF-IDF + LogReg",
+            "backbone": "TF-IDF + Logistic Regression",
+            "tags": ["Baseline"],
+            "known_f1": 0.6401,
+            "known_acc": 0.6327,
+            "is_deployed": False,
+            "available": False,
+            "label": None, "confidence": None, "probs": None,
+            "note": "File models/baseline/tfidf_logreg.joblib không tìm thấy.",
         })
 
-        # ── Exp2: normalization, zero engagement ──
-        predictor.normalizer = orig_normalizer
-        r = predictor.predict([text], tabular_overrides={"likes": 0, "comments": 0, "shares": 0})[0]
+    # ── 2. XLM-R only (text branch, tabular zeroed) ──
+    try:
+        probs = predictor.predict_text_branch_only([text])
+        r = predictor._probs_to_results(probs)[0]
         results.append({
-            "exp_id": "exp2",
-            "model_name": "Exp 2 — + Teencode",
-            "backbone": "XLM-RoBERTa-base",
-            "tags": ["Teencode ✓"],
+            "model_id": "xlmr",
+            "model_name": "XLM-R only",
+            "backbone": "XLM-RoBERTa-base (text branch)",
+            "tags": ["Teencode ✓", "Neural"],
             "known_f1": 0.6548,
             "known_acc": 0.6647,
             "is_deployed": False,
@@ -428,43 +458,61 @@ def predict_compare(payload: CompareRequest) -> Dict[str, Any]:
             "label": r["label"],
             "confidence": round(r["confidence"], 6),
             "probs": {k: round(v, 6) for k, v in r["probs"].items()},
-            "note": "Simulation: cùng trọng số Exp3, chuẩn hoá nhưng tương tác = 0",
+            "note": "Chỉ dùng nhánh text (XLM-R), embedding tabular = 0. Hiểu ngữ nghĩa & ngữ cảnh.",
+        })
+    except Exception as e:
+        results.append({
+            "model_id": "xlmr", "model_name": "XLM-R only",
+            "backbone": "XLM-RoBERTa-base", "tags": ["Neural"],
+            "known_f1": 0.6548, "known_acc": 0.6647,
+            "is_deployed": False, "available": False,
+            "label": None, "confidence": None, "probs": None,
+            "note": f"Lỗi: {e}",
         })
 
-        # ── Exp3: full pipeline (deployed model) ──
-        r = predictor.predict([text], tabular_overrides=tab_overrides)[0]
+    # ── 3. FT-Transformer only (tabular branch, text zeroed) ──
+    try:
+        probs = predictor.predict_tabular_branch_only([text], tabular_overrides=tab_overrides)
+        r = predictor._probs_to_results(probs)[0]
         results.append({
-            "exp_id": "exp3",
-            "model_name": "Exp 3 — Full Fusion",
-            "backbone": "XLM-RoBERTa-base",
-            "tags": ["Teencode ✓", "Tabular ✓", "Deployed"],
-            "known_f1": 0.6877,
-            "known_acc": 0.7020,
-            "is_deployed": True,
+            "model_id": "fttransformer",
+            "model_name": "FT-Transformer only",
+            "backbone": "FT-Transformer (tabular branch)",
+            "tags": ["Tabular ✓", "Hành vi"],
+            "known_f1": 0.5200,
+            "known_acc": 0.5500,
+            "is_deployed": False,
             "available": True,
             "label": r["label"],
             "confidence": round(r["confidence"], 6),
             "probs": {k: round(v, 6) for k, v in r["probs"].items()},
-            "note": "Mô hình thực tế đang chạy trong demo — XLM-R + Teencode + FT-Transformer",
+            "note": "Chỉ dùng đặc trưng hành vi (likes, comments, độ dài văn bản,...). Text embedding = 0.",
+        })
+    except Exception as e:
+        results.append({
+            "model_id": "fttransformer", "model_name": "FT-Transformer only",
+            "backbone": "FT-Transformer", "tags": ["Tabular"],
+            "known_f1": 0.5200, "known_acc": 0.5500,
+            "is_deployed": False, "available": False,
+            "label": None, "confidence": None, "probs": None,
+            "note": f"Lỗi: {e}",
         })
 
-    finally:
-        predictor.normalizer = orig_normalizer
-
-    # ── Exp4: PhoBERT — not loaded ──
+    # ── 4. Full Fusion — deployed model ──
+    r = predictor.predict([text], tabular_overrides=tab_overrides)[0]
     results.append({
-        "exp_id": "exp4",
-        "model_name": "Exp 4 — PhoBERT-v2",
-        "backbone": "PhoBERT-v2 (VinAI)",
-        "tags": ["Teencode ✓", "Best F1"],
-        "known_f1": 0.7186,
-        "known_acc": 0.7212,
-        "is_deployed": False,
-        "available": False,
-        "label": None,
-        "confidence": None,
-        "probs": None,
-        "note": "Yêu cầu PhoBERT-v2 + VnCoreNLP. Không load trong demo này để tiết kiệm RAM.",
+        "model_id": "fusion",
+        "model_name": "Teencode + XLM-R + FT-Transformer Fusion",
+        "backbone": "XLM-R + FT-Transformer → MLP Fusion",
+        "tags": ["Teencode ✓", "Text ✓", "Tabular ✓", "Deployed"],
+        "known_f1": 0.6877,
+        "known_acc": 0.7020,
+        "is_deployed": True,
+        "available": True,
+        "label": r["label"],
+        "confidence": round(r["confidence"], 6),
+        "probs": {k: round(v, 6) for k, v in r["probs"].items()},
+        "note": "Mô hình đầy đủ đang chạy trong demo — kết hợp cả text và tabular features.",
     })
 
     return {

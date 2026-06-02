@@ -67,6 +67,8 @@ colab_sentiment/
 # Model checkpoints, weights, logs
 models/*
 !models/.gitkeep
+!models/baseline/
+!models/baseline/tfidf_logreg.joblib
 *.pt
 *.pth
 *.ckpt

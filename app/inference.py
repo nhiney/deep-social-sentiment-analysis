@@ -234,14 +234,86 @@ class LateFusionPredictor:
         return out
 
     def predict_proba_for_lime(self, texts: Sequence[str]) -> np.ndarray:
-        """Variant tailored for ``lime.lime_text.LimeTextExplainer``.
-
-        Same signature contract: ``texts -> (N, n_classes)`` numpy array.
-        Tabular features are derived per-text from the (perturbed) input,
-        which is what we want — LIME perturbations should affect the
-        full pipeline including the tabular signals.
-        """
+        """Variant tailored for ``lime.lime_text.LimeTextExplainer``."""
         return self.predict_proba(texts, tabular_overrides=None)
+
+    @torch.no_grad()
+    def predict_text_branch_only(
+        self,
+        texts: Sequence[str],
+    ) -> np.ndarray:
+        """XLM-R branch only — tabular embedding zeroed out.
+
+        Simulates a text-only model on the fusion model's weights.
+        The tabular slot in the concatenation is replaced with zeros so
+        the fusion head receives [h_text | 0...0] instead of [h_text | h_tab].
+        """
+        if self.normalizer is not None:
+            texts = [self.normalizer(t) for t in texts]
+
+        enc = self.tokenizer(
+            list(texts), padding="max_length", truncation=True,
+            max_length=self.max_length, return_tensors="pt",
+        )
+        enc = {k: v.to(self.device) for k, v in enc.items()}
+
+        h_text = self.model.text_branch(enc["input_ids"], enc["attention_mask"])
+
+        if self.model.has_tabular:
+            h_tab = torch.zeros(h_text.shape[0], self.model.tab_dim, device=self.device)
+            h_fusion = torch.cat([h_text, h_tab], dim=-1)
+        else:
+            h_fusion = h_text
+
+        logits = self.model.fusion_head(h_fusion)
+        return torch.softmax(logits, dim=-1).detach().cpu().numpy()
+
+    @torch.no_grad()
+    def predict_tabular_branch_only(
+        self,
+        texts: Sequence[str],
+        tabular_overrides: Optional[Dict[str, Any]] = None,
+    ) -> np.ndarray:
+        """FT-Transformer branch only — text embedding zeroed out.
+
+        Simulates a tabular-only model: text-derived features (length,
+        n_words, emoji count …) and optional engagement overrides are
+        preserved; the XLM-R embedding slot is replaced with zeros.
+        """
+        if self.normalizer is not None:
+            texts = [self.normalizer(t) for t in texts]
+
+        if self._tab_required and self.tab_pp is not None:
+            df = pd.DataFrame({"text": texts})
+            df = pd.concat([df, make_text_derived_features(df["text"])], axis=1)
+            if tabular_overrides:
+                for col, val in tabular_overrides.items():
+                    if col in df.columns:
+                        df[col] = val
+            tab = self.tab_pp.transform(df)
+            num_t = torch.from_numpy(tab["num_features"]).float().to(self.device)
+            cat_t = torch.from_numpy(tab["cat_features"]).long().to(self.device)
+            h_tab = self.model.tabular_branch(num_t, cat_t)
+        else:
+            raise RuntimeError("Model has no tabular branch.")
+
+        h_text = torch.zeros(h_tab.shape[0], self.model.text_dim, device=self.device)
+        h_fusion = torch.cat([h_text, h_tab], dim=-1)
+        logits = self.model.fusion_head(h_fusion)
+        return torch.softmax(logits, dim=-1).detach().cpu().numpy()
+
+    def _probs_to_results(self, probs: np.ndarray) -> List[Dict[str, Any]]:
+        """Convert (N, n_classes) probs array to list of result dicts."""
+        out = []
+        for row in probs:
+            top_id = int(np.argmax(row))
+            out.append({
+                "label":      self.class_names[top_id],
+                "confidence": float(row[top_id]),
+                "probs":      {self.class_names[i]: float(row[i])
+                               for i in range(len(self.class_names))},
+            })
+        return out
 
     # ------------------------------------------------------------------ #
     # Helpers
