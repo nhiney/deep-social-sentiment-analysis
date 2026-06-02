@@ -616,6 +616,66 @@
 <!-- TAB: BATCH                                    -->
 <!-- ══════════════════════════════════════════════ -->
 <div id="tab-batch" class="tab-pane space-y-5">
+
+<!-- ── Model Comparison ── -->
+<div class="card">
+  <div class="section-title">So sánh 4 cấu hình mô hình — 1 văn bản</div>
+  <p class="text-xs text-slate-500 mb-3">Nhập 1 văn bản để chạy qua 4 cấu hình thí nghiệm và so sánh kết quả: ảnh hưởng của Teencode normalization, Tabular features và backbone khác nhau.</p>
+
+  <div class="grid grid-cols-1 lg:grid-cols-4 gap-3 mb-3">
+    <div class="lg:col-span-3">
+      <textarea id="compare-input" rows="3"
+        class="form-input text-sm resize-none w-full"
+        placeholder="Nhập văn bản tiếng Việt... (teencode, code-switching đều ok)"></textarea>
+    </div>
+    <div class="space-y-2">
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">👍 Likes</label>
+        <input type="number" id="compare-likes" value="0" min="0" class="form-input text-sm">
+      </div>
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">💬 Comments</label>
+        <input type="number" id="compare-comments" value="0" min="0" class="form-input text-sm">
+      </div>
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">🔁 Shares</label>
+        <input type="number" id="compare-shares" value="0" min="0" class="form-input text-sm">
+      </div>
+    </div>
+  </div>
+
+  <div class="flex items-center gap-2 mb-4 flex-wrap">
+    <button onclick="runCompare()" id="compare-btn" class="btn-primary flex items-center justify-center gap-2" style="width:auto;padding:9px 24px">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+      So sánh 4 mô hình
+    </button>
+    <span class="text-xs text-slate-400">Exp1/2/3 dùng cùng weights — Exp4 PhoBERT không load trong demo</span>
+  </div>
+
+  <!-- Loading -->
+  <div id="compare-loading" class="hidden flex items-center gap-3 py-4">
+    <div class="spinner"></div>
+    <span class="text-sm text-slate-500">Đang chạy 3 cấu hình...</span>
+  </div>
+
+  <!-- Error -->
+  <div id="compare-error" class="hidden card border-red-200 mb-0">
+    <p class="text-sm text-red-600" id="compare-error-msg"></p>
+  </div>
+
+  <!-- Results -->
+  <div id="compare-results" class="hidden space-y-3">
+    <!-- Normalization diff note -->
+    <div id="compare-norm-note" class="hidden p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800"></div>
+
+    <!-- 4 model cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3" id="compare-cards"></div>
+
+    <!-- Summary insights -->
+    <div id="compare-summary" class="p-3 bg-indigo-50 border border-indigo-100 rounded-lg text-xs text-slate-700 leading-relaxed"></div>
+  </div>
+</div>
+
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
     <div class="card">
@@ -1675,6 +1735,155 @@ async function runLime(text) {
   }).join('');
 
   show('lime-content');
+}
+
+// ── Model compare ──
+const EXP_STYLE = {
+  exp1: { border:'#94a3b8', bg:'#f8fafc', badgeCls:'bg-slate-100 text-slate-600', f1Color:'#64748b' },
+  exp2: { border:'#3b82f6', bg:'#eff6ff', badgeCls:'bg-blue-100 text-blue-700',   f1Color:'#2563eb' },
+  exp3: { border:'#4f46e5', bg:'#eef2ff', badgeCls:'bg-indigo-100 text-indigo-700', f1Color:'#4f46e5' },
+  exp4: { border:'#7c3aed', bg:'#f5f3ff', badgeCls:'bg-violet-100 text-violet-700', f1Color:'#7c3aed' },
+};
+
+async function runCompare() {
+  const text = document.getElementById('compare-input').value.trim();
+  if (!text) { showErr('compare-error','compare-error-msg','Vui lòng nhập văn bản.'); return; }
+  const likes    = +document.getElementById('compare-likes').value    || 0;
+  const comments = +document.getElementById('compare-comments').value || 0;
+  const shares   = +document.getElementById('compare-shares').value   || 0;
+
+  hide('compare-results'); hide('compare-error');
+  show('compare-loading');
+  document.getElementById('compare-btn').disabled = true;
+
+  try {
+    const resp = await fetch('/predict/compare', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ text, likes, comments, shares }),
+    });
+    if (!resp.ok) { let msg=`HTTP ${resp.status}`; try { msg=(await resp.json()).detail||msg; } catch {} throw new Error(msg); }
+    const data = await resp.json();
+    hide('compare-loading');
+    renderCompare(data);
+  } catch(e) {
+    hide('compare-loading');
+    showErr('compare-error','compare-error-msg','Lỗi: ' + e.message);
+  }
+  document.getElementById('compare-btn').disabled = false;
+}
+
+function renderCompare(data) {
+  // Normalization note
+  const normEl = document.getElementById('compare-norm-note');
+  if (data.text_original !== data.text_normalized) {
+    normEl.innerHTML = `⚙️ <strong>Teencode đã chuẩn hoá:</strong> <span class="mono">"${data.text_original}"</span> → <span class="mono text-emerald-700">"${data.text_normalized}"</span>`;
+    normEl.classList.remove('hidden');
+  } else {
+    normEl.classList.add('hidden');
+  }
+
+  // Render cards
+  document.getElementById('compare-cards').innerHTML = data.results.map(r => {
+    const s = EXP_STYLE[r.exp_id] || EXP_STYLE.exp1;
+    const tagBadges = (r.tags || []).map(t => {
+      const special = t === 'Deployed' ? 'bg-indigo-600 text-white' : t === 'Best F1' ? 'bg-violet-600 text-white' : s.badgeCls;
+      return `<span class="tag ${special} text-xs">${t}</span>`;
+    }).join('');
+
+    if (!r.available) {
+      return `<div class="rounded-xl border-2 p-4 flex flex-col" style="border-color:${s.border};background:${s.bg}">
+        <div class="mono text-xs font-bold text-slate-400 mb-0.5">${r.exp_id.toUpperCase()}</div>
+        <div class="font-bold text-slate-800 text-sm leading-tight mb-1">${r.model_name}</div>
+        <div class="text-xs text-slate-500 mb-2">${r.backbone}</div>
+        <div class="flex flex-wrap gap-1 mb-3">${tagBadges}</div>
+        <div class="flex-1 flex flex-col items-center justify-center py-5 rounded-lg bg-slate-100 mb-3">
+          <div class="text-3xl mb-1">🔒</div>
+          <div class="text-xs font-semibold text-slate-500">Không khả dụng</div>
+          <div class="text-xs text-slate-400 mt-1 text-center px-2">Model không load trong demo</div>
+        </div>
+        <div class="space-y-1 pt-2 border-t border-slate-200 mt-auto">
+          <div class="flex justify-between text-xs"><span class="text-slate-500">F1-Macro</span><span class="font-bold mono" style="color:${s.f1Color}">${r.known_f1}</span></div>
+          <div class="flex justify-between text-xs"><span class="text-slate-500">Accuracy</span><span class="font-semibold mono text-slate-600">${r.known_acc}</span></div>
+        </div>
+        <div class="mt-2 text-xs text-slate-400 italic leading-relaxed">${r.note}</div>
+      </div>`;
+    }
+
+    const m = EMO[r.label] || { emoji:'?', vi: r.label, color:'#64748b', bg:'#f1f5f9' };
+    const pct = (r.confidence * 100).toFixed(1);
+    const sorted = ORDER.filter(k => r.probs[k] != null).sort((a,b) => r.probs[b] - r.probs[a]);
+
+    return `<div class="rounded-xl border-2 p-4 flex flex-col" style="border-color:${s.border};background:${s.bg}">
+      <div class="mono text-xs font-bold text-slate-400 mb-0.5">${r.exp_id.toUpperCase()}</div>
+      <div class="font-bold text-slate-800 text-sm leading-tight mb-1">${r.model_name}</div>
+      <div class="text-xs text-slate-500 mb-2">${r.backbone}</div>
+      <div class="flex flex-wrap gap-1 mb-3">${tagBadges}</div>
+
+      <!-- Prediction badge -->
+      <div class="rounded-lg py-3 px-2 text-center mb-3" style="background:${m.bg}">
+        <div class="text-2xl leading-none">${m.emoji}</div>
+        <div class="font-bold text-sm mt-1 leading-none" style="color:${m.color}">${m.vi}</div>
+        <div class="text-xl font-bold mono mt-1" style="color:${m.color}">${pct}%</div>
+      </div>
+
+      <!-- Top-4 prob bars -->
+      <div class="space-y-1.5 mb-3 flex-1">
+        ${sorted.slice(0,4).map(cls => {
+          const e = EMO[cls]; const p = (r.probs[cls]*100).toFixed(1); const best = cls===r.label;
+          return `<div>
+            <div class="flex justify-between text-xs mb-0.5">
+              <span class="${best?'font-semibold text-slate-800':'text-slate-600'}">${e.emoji} ${e.vi}</span>
+              <span class="mono ${best?'font-bold':'font-normal'}" style="color:${e.color}">${p}%</span>
+            </div>
+            <div class="prob-track"><div class="prob-fill" style="width:${p}%;background:${e.color}"></div></div>
+          </div>`;
+        }).join('')}
+      </div>
+
+      <!-- Metrics -->
+      <div class="space-y-1 pt-2 border-t border-slate-200 mt-auto">
+        <div class="flex justify-between text-xs"><span class="text-slate-500">F1-Macro</span><span class="font-bold mono" style="color:${s.f1Color}">${r.known_f1}</span></div>
+        <div class="flex justify-between text-xs"><span class="text-slate-500">Accuracy</span><span class="font-semibold mono text-slate-600">${r.known_acc}</span></div>
+      </div>
+      <div class="mt-2 text-xs text-slate-400 italic leading-relaxed">${r.note}</div>
+    </div>`;
+  }).join('');
+
+  // Summary insights
+  const avail = data.results.filter(r => r.available);
+  const allSame = avail.every(r => r.label === avail[0].label);
+  const best = avail.reduce((a,b) => a.confidence > b.confidence ? a : b);
+  const exp1 = data.results.find(r => r.exp_id==='exp1');
+  const exp2 = data.results.find(r => r.exp_id==='exp2');
+  const exp3 = data.results.find(r => r.exp_id==='exp3');
+
+  let parts = [];
+  if (allSame) {
+    parts.push(`✅ <strong>Tất cả ${avail.length} cấu hình đồng thuận:</strong> dự đoán ${EMO[avail[0].label]?.emoji} <strong>${EMO[avail[0].label]?.vi}</strong>`);
+  } else {
+    const labels = [...new Set(avail.map(r=>r.label))];
+    parts.push(`⚠️ <strong>Các cấu hình không đồng thuận:</strong> ${labels.map(l=>`${EMO[l]?.emoji} ${EMO[l]?.vi}`).join(' / ')}`);
+  }
+  parts.push(`🏆 <strong>Tự tin nhất:</strong> ${best.model_name} (${(best.confidence*100).toFixed(1)}%)`);
+
+  if (exp1?.available && exp2?.available) {
+    if (exp1.label !== exp2.label) {
+      parts.push(`🔄 <strong>Teencode đổi nhãn:</strong> ${EMO[exp1.label]?.vi} → ${EMO[exp2.label]?.vi}`);
+    } else {
+      const diff = (exp2.confidence - exp1.confidence)*100;
+      parts.push(`✨ <strong>Teencode ${diff>=0?'tăng':'giảm'} confidence</strong> ${diff>=0?'+':''}${diff.toFixed(1)}%`);
+    }
+  }
+  if (exp2?.available && exp3?.available) {
+    if (exp2.label !== exp3.label) {
+      parts.push(`📊 <strong>Tabular features đổi nhãn:</strong> ${EMO[exp2.label]?.vi} → ${EMO[exp3.label]?.vi}`);
+    } else {
+      const diff = (exp3.confidence - exp2.confidence)*100;
+      parts.push(`📊 <strong>Tabular features ${diff>=0?'tăng':'giảm'} confidence</strong> ${diff>=0?'+':''}${diff.toFixed(1)}%`);
+    }
+  }
+  document.getElementById('compare-summary').innerHTML = parts.join(' &nbsp;·&nbsp; ');
+  show('compare-results');
 }
 
 // ── Batch predict ──

@@ -110,6 +110,22 @@ class BatchPredictResponse(BaseModel):
     n_texts: int
 
 
+class CompareRequest(BaseModel):
+    """Request payload for 4-model comparison."""
+
+    text: str = Field(..., min_length=1)
+    likes: float = Field(default=0, ge=0)
+    comments: float = Field(default=0, ge=0)
+    shares: float = Field(default=0, ge=0)
+
+    @field_validator("text")
+    @classmethod
+    def text_not_blank(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("text must not be blank.")
+        return v
+
+
 class HealthResponse(BaseModel):
     """Liveness / readiness probe response."""
 
@@ -358,3 +374,101 @@ def predict_with_explanation(payload: ExplainRequest) -> PredictResponse:
             "n_samples":      explanation.n_samples,
         },
     )
+
+
+@app.post("/predict/compare", tags=["inference"])
+def predict_compare(payload: CompareRequest) -> Dict[str, Any]:
+    """Run a single text through 4 model configurations and return side-by-side results.
+
+    Exp1/2/3 use the **same** loaded checkpoint but with different inference settings:
+    - Exp1: no teencode normalization, engagement = 0
+    - Exp2: with normalization, engagement = 0
+    - Exp3: with normalization + actual tabular features (deployed model)
+    - Exp4: PhoBERT-v2 — not loaded in this demo (returned as unavailable)
+    """
+    predictor = _require_predictor()
+    text = payload.text.strip()
+
+    normalized_text = predictor.normalizer(text) if predictor.normalizer else text
+    orig_normalizer = predictor.normalizer
+    tab_overrides = {"likes": payload.likes, "comments": payload.comments, "shares": payload.shares}
+
+    results = []
+    try:
+        # ── Exp1: no normalization, zero engagement ──
+        predictor.normalizer = None
+        r = predictor.predict([text], tabular_overrides={"likes": 0, "comments": 0, "shares": 0})[0]
+        results.append({
+            "exp_id": "exp1",
+            "model_name": "Exp 1 — Baseline",
+            "backbone": "XLM-RoBERTa-base",
+            "tags": ["Không chuẩn hoá"],
+            "known_f1": 0.6235,
+            "known_acc": 0.6424,
+            "is_deployed": False,
+            "available": True,
+            "label": r["label"],
+            "confidence": round(r["confidence"], 6),
+            "probs": {k: round(v, 6) for k, v in r["probs"].items()},
+            "note": "Simulation: cùng trọng số Exp3, bỏ qua chuẩn hoá teencode",
+        })
+
+        # ── Exp2: normalization, zero engagement ──
+        predictor.normalizer = orig_normalizer
+        r = predictor.predict([text], tabular_overrides={"likes": 0, "comments": 0, "shares": 0})[0]
+        results.append({
+            "exp_id": "exp2",
+            "model_name": "Exp 2 — + Teencode",
+            "backbone": "XLM-RoBERTa-base",
+            "tags": ["Teencode ✓"],
+            "known_f1": 0.6548,
+            "known_acc": 0.6647,
+            "is_deployed": False,
+            "available": True,
+            "label": r["label"],
+            "confidence": round(r["confidence"], 6),
+            "probs": {k: round(v, 6) for k, v in r["probs"].items()},
+            "note": "Simulation: cùng trọng số Exp3, chuẩn hoá nhưng tương tác = 0",
+        })
+
+        # ── Exp3: full pipeline (deployed model) ──
+        r = predictor.predict([text], tabular_overrides=tab_overrides)[0]
+        results.append({
+            "exp_id": "exp3",
+            "model_name": "Exp 3 — Full Fusion",
+            "backbone": "XLM-RoBERTa-base",
+            "tags": ["Teencode ✓", "Tabular ✓", "Deployed"],
+            "known_f1": 0.6877,
+            "known_acc": 0.7020,
+            "is_deployed": True,
+            "available": True,
+            "label": r["label"],
+            "confidence": round(r["confidence"], 6),
+            "probs": {k: round(v, 6) for k, v in r["probs"].items()},
+            "note": "Mô hình thực tế đang chạy trong demo — XLM-R + Teencode + FT-Transformer",
+        })
+
+    finally:
+        predictor.normalizer = orig_normalizer
+
+    # ── Exp4: PhoBERT — not loaded ──
+    results.append({
+        "exp_id": "exp4",
+        "model_name": "Exp 4 — PhoBERT-v2",
+        "backbone": "PhoBERT-v2 (VinAI)",
+        "tags": ["Teencode ✓", "Best F1"],
+        "known_f1": 0.7186,
+        "known_acc": 0.7212,
+        "is_deployed": False,
+        "available": False,
+        "label": None,
+        "confidence": None,
+        "probs": None,
+        "note": "Yêu cầu PhoBERT-v2 + VnCoreNLP. Không load trong demo này để tiết kiệm RAM.",
+    })
+
+    return {
+        "text_original": text,
+        "text_normalized": normalized_text,
+        "results": results,
+    }
