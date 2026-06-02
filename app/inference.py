@@ -129,8 +129,25 @@ class LateFusionPredictor:
         self.tokenizer = AutoTokenizer.from_pretrained(self.model.config.text_model_name)
 
         # -------- Optional teencode normalizer --------
+        # Try to locate the extended slang dictionary shipped alongside the
+        # codebase. Paths are checked relative to the repo root so the same
+        # code works both locally and inside the Docker container.
+        _dict_candidates = [
+            Path("data/external/teencode.json"),
+            Path(__file__).resolve().parents[1] / "data" / "external" / "teencode.json",
+        ]
+        _dict_path: Optional[Path] = next(
+            (p for p in _dict_candidates if p.exists()), None
+        )
+        if _dict_path:
+            logger.info("Loading extended teencode dictionary from %s", _dict_path)
+        else:
+            logger.warning(
+                "Extended teencode dictionary not found; using built-in defaults only."
+            )
         self.normalizer: Optional[TeencodeNormalizer] = (
-            TeencodeNormalizer() if apply_normalizer else None
+            TeencodeNormalizer(teencode_dict_path=_dict_path)
+            if apply_normalizer else None
         )
 
         # -------- Tabular preprocessor (optional) --------

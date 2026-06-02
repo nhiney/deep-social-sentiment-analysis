@@ -10,11 +10,13 @@ WORKDIR /code
 COPY requirements-hf.txt .
 RUN pip install --no-cache-dir -r requirements-hf.txt
 
-# Copy source code (không copy models/ hay data/)
+# Copy source code + extended slang dictionary
 COPY app/ app/
 COPY src/ src/
 COPY configs/ configs/
 COPY reports/figures/ reports/figures/
+COPY data/external/teencode.json data/external/teencode.json
+COPY models/baseline/ models/baseline/
 
 # Download model files at build time (cached as Docker layer)
 RUN python - << 'PYEOF'
