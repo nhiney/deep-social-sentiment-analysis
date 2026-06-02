@@ -1567,7 +1567,7 @@ async function runPredict() {
   let data;
   try {
     const resp = await fetch('/predict', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
-    if (!resp.ok) throw new Error((await resp.json()).detail || `HTTP ${resp.status}`);
+    if (!resp.ok) { let msg = `HTTP ${resp.status}`; try { msg = (await resp.json()).detail || msg; } catch {} throw new Error(msg); }
     data = await resp.json();
   } catch(e) {
     hide('result-loading');
@@ -1645,7 +1645,7 @@ async function runLime(text) {
   let data;
   try {
     const resp = await fetch('/predict/explain', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ text, num_samples:150 }) });
-    if (!resp.ok) throw new Error((await resp.json()).detail || `HTTP ${resp.status}`);
+    if (!resp.ok) { let msg = `HTTP ${resp.status}`; try { msg = (await resp.json()).detail || msg; } catch {} throw new Error(msg); }
     data = await resp.json();
   } catch(e) {
     hide('lime-loading');
@@ -1704,7 +1704,7 @@ async function runBatch() {
 
   try {
     const resp = await fetch('/predict/batch', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ texts, batch_size:16 }) });
-    if (!resp.ok) throw new Error((await resp.json()).detail || `HTTP ${resp.status}`);
+    if (!resp.ok) { let msg = `HTTP ${resp.status}`; try { msg = (await resp.json()).detail || msg; } catch {} throw new Error(msg); }
     const data = await resp.json();
 
     hide('batch-loading');
