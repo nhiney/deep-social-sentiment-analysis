@@ -163,6 +163,10 @@
       <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0118 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/></svg>
       Phương pháp
     </button>
+    <button class="nav-tab" id="btn-facebook" onclick="switchTab('facebook')">
+      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+      Facebook
+    </button>
   </div>
 </nav>
 
@@ -1486,6 +1490,171 @@ Thi xong rồi, nhẹ người hẳn!
 
 </div><!-- /tab-method -->
 
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- TAB: FACEBOOK                                 -->
+<!-- ══════════════════════════════════════════════ -->
+<div id="tab-facebook" class="tab-pane space-y-5">
+
+  <!-- ── Hướng dẫn + URL Input ── -->
+  <div class="card">
+    <div class="section-title">Phân tích bình luận Facebook — So sánh 4 mô hình</div>
+
+    <!-- Workflow steps -->
+    <div class="flex items-start gap-6 mb-5 p-4 bg-slate-50 rounded-lg flex-wrap">
+      <div class="flex items-start gap-2 flex-1 min-w-36">
+        <div class="step-num flex-shrink-0">1</div>
+        <div><div class="text-xs font-semibold text-slate-700">Paste link Facebook</div><div class="text-xs text-slate-500 mt-0.5">Bài viết hoặc bình luận</div></div>
+      </div>
+      <div class="text-slate-300 self-center hidden sm:block">→</div>
+      <div class="flex items-start gap-2 flex-1 min-w-36">
+        <div class="step-num flex-shrink-0">2</div>
+        <div><div class="text-xs font-semibold text-slate-700">Copy nội dung từ FB</div><div class="text-xs text-slate-500 mt-0.5">Paste vào ô bên dưới</div></div>
+      </div>
+      <div class="text-slate-300 self-center hidden sm:block">→</div>
+      <div class="flex items-start gap-2 flex-1 min-w-36">
+        <div class="step-num flex-shrink-0">3</div>
+        <div><div class="text-xs font-semibold text-slate-700">Nhấn So sánh</div><div class="text-xs text-slate-500 mt-0.5">Xem kết quả 4 mô hình</div></div>
+      </div>
+      <div class="text-slate-300 self-center hidden sm:block">→</div>
+      <div class="flex items-start gap-2 flex-1 min-w-36">
+        <div class="step-num flex-shrink-0">4</div>
+        <div><div class="text-xs font-semibold text-slate-700">So sánh chỉ số</div><div class="text-xs text-slate-500 mt-0.5">F1, Accuracy, Confidence</div></div>
+      </div>
+    </div>
+
+    <!-- URL Input -->
+    <div class="mb-3">
+      <label class="block text-xs font-semibold text-slate-500 mb-1.5">🔗 Link bài viết / bình luận Facebook</label>
+      <div class="flex gap-2">
+        <input id="fb-url" type="url" class="form-input flex-1 text-sm"
+               placeholder="https://www.facebook.com/..."
+               oninput="parseFbUrl(this.value)">
+        <button onclick="parseFbUrl(document.getElementById('fb-url').value)"
+                class="btn-secondary flex-shrink-0">Đọc URL</button>
+      </div>
+    </div>
+
+    <!-- URL Parsed Metadata -->
+    <div id="fb-meta" class="hidden mb-3 p-3 bg-blue-50 border border-blue-100 rounded-lg text-xs text-blue-800"></div>
+
+    <!-- Warning -->
+    <div class="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+      <div class="flex items-start gap-2">
+        <span class="text-base flex-shrink-0">⚠️</span>
+        <div class="text-xs text-amber-800">
+          <strong>Facebook bảo vệ nội dung bằng đăng nhập</strong> — không thể tự động đọc text bình luận.<br>
+          Vui lòng <strong>mở link trên Facebook</strong>, copy nội dung bình luận và <strong>paste vào ô bên dưới</strong>.
+        </div>
+      </div>
+    </div>
+
+    <!-- Text input -->
+    <div class="mb-4">
+      <div class="flex items-center justify-between mb-1.5">
+        <label class="text-xs font-semibold text-slate-500">📝 Nội dung bình luận (paste từ Facebook)</label>
+        <span id="fb-char-count" class="text-xs text-slate-400">0 ký tự</span>
+      </div>
+      <textarea id="fb-text" rows="4" class="form-input resize-none w-full text-sm"
+                oninput="updateFbCharCount()"
+                placeholder="Copy text bình luận từ Facebook và paste vào đây...&#10;Ví dụ: Sản phẩm này tệ quá, đặt hàng 2 tuần mà chưa nhận được, CSKH không bắt máy!!!"></textarea>
+    </div>
+
+    <!-- Tabular + example presets -->
+    <div class="mb-4">
+      <div class="flex items-center justify-between mb-1.5">
+        <label class="text-xs font-semibold text-slate-500">Tương tác bài viết (tuỳ chọn)</label>
+        <div class="flex gap-1.5">
+          <button onclick="setFbTabular(0,0,0)" class="tag bg-slate-100 text-slate-600 text-xs hover:bg-slate-200 cursor-pointer">Không</button>
+          <button onclick="setFbTabular(50,10,5)" class="tag bg-blue-100 text-blue-700 text-xs hover:bg-blue-200 cursor-pointer">Bình thường</button>
+          <button onclick="setFbTabular(5000,800,300)" class="tag bg-orange-100 text-orange-700 text-xs hover:bg-orange-200 cursor-pointer">🔥 Viral</button>
+        </div>
+      </div>
+      <div class="grid grid-cols-3 gap-3">
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">👍 Likes</label>
+          <input type="number" id="fb-likes" min="0" value="0" class="form-input text-sm">
+        </div>
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">💬 Comments</label>
+          <input type="number" id="fb-comments" min="0" value="0" class="form-input text-sm">
+        </div>
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">🔁 Shares</label>
+          <input type="number" id="fb-shares" min="0" value="0" class="form-input text-sm">
+        </div>
+      </div>
+    </div>
+
+    <button onclick="runFbCompare()" id="fb-compare-btn"
+            class="btn-primary flex items-center justify-center gap-2">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+      So sánh 4 mô hình ngay
+    </button>
+  </div>
+
+  <!-- Loading -->
+  <div id="fb-loading" class="hidden card flex items-center gap-3 py-6">
+    <div class="spinner"></div>
+    <span class="text-sm text-slate-500">Đang chạy 3 cấu hình mô hình...</span>
+  </div>
+
+  <!-- Error -->
+  <div id="fb-error" class="hidden card border-red-200">
+    <p class="text-sm text-red-600" id="fb-error-msg"></p>
+  </div>
+
+  <!-- Results -->
+  <div id="fb-results" class="hidden space-y-4">
+
+    <!-- Context bar -->
+    <div id="fb-context-bar" class="card bg-blue-50 border border-blue-100 text-xs text-blue-800 flex flex-wrap gap-3 items-center"></div>
+
+    <!-- Normalization note -->
+    <div id="fb-norm-note" class="hidden p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800"></div>
+
+    <!-- 4 model cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3" id="fb-cards"></div>
+
+    <!-- Metrics comparison table -->
+    <div class="card">
+      <div class="section-title">Bảng so sánh chỉ số — 4 mô hình</div>
+      <div class="overflow-x-auto -mx-5 px-5">
+        <table class="data-table" id="fb-metrics-table">
+          <thead>
+            <tr>
+              <th>Mô hình</th>
+              <th class="text-center">Kiến trúc</th>
+              <th class="text-right">F1-Macro ↑</th>
+              <th class="text-right">Accuracy ↑</th>
+              <th class="text-center">Dự đoán</th>
+              <th class="text-right">Confidence</th>
+              <th class="text-center">Trạng thái</th>
+            </tr>
+          </thead>
+          <tbody id="fb-metrics-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Insight summary -->
+    <div id="fb-summary" class="p-3 bg-indigo-50 border border-indigo-100 rounded-lg text-xs text-slate-700 leading-relaxed"></div>
+
+    <!-- Action buttons -->
+    <div class="flex gap-3">
+      <button onclick="clearFbAnalysis()" class="btn-secondary flex items-center gap-1.5 text-xs">
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>
+        Phân tích mới
+      </button>
+      <button onclick="copyFbResults()" class="btn-secondary flex items-center gap-1.5 text-xs">
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"/></svg>
+        Copy kết quả
+      </button>
+    </div>
+  </div>
+
+</div><!-- /tab-facebook -->
+
 </main>
 
 <!-- ══════════════ FOOTER ══════════════ -->
@@ -1984,6 +2153,237 @@ function showLoad(loadId, textId, msg) {
 function showErr(containerId, msgId, msg) {
   document.getElementById(msgId).textContent = msg;
   show(containerId);
+}
+
+// ── Facebook tab ──
+function parseFbUrl(url) {
+  const el = document.getElementById('fb-meta');
+  if (!url || !url.includes('facebook.com')) { el.classList.add('hidden'); return; }
+  try {
+    const u = new URL(url);
+    const parts = u.pathname.split('/').filter(Boolean);
+    const meta = {};
+
+    // Type detection
+    if (u.pathname.includes('/photo')) meta.type = '🖼 Ảnh';
+    else if (u.pathname.includes('/video') || u.pathname.includes('/reel')) meta.type = '🎬 Video/Reel';
+    else if (u.pathname.includes('/groups')) meta.type = '👥 Bài viết nhóm';
+    else if (u.pathname.includes('/permalink') || parts.includes('posts')) meta.type = '📝 Bài viết';
+    else meta.type = '📌 Bài viết / Bình luận';
+
+    // Page / group
+    if (parts[0] === 'groups' && parts[1]) meta.group = parts[1];
+    else if (parts[0] && !['photo','video','reel','permalink','story'].includes(parts[0])) meta.page = parts[0];
+
+    // IDs
+    meta.postId = u.searchParams.get('story_fbid') || u.searchParams.get('fbid') ||
+                  u.searchParams.get('id') || parts.find(p => /^\d{6,}$/.test(p));
+    meta.commentId = u.searchParams.get('comment_id') || u.searchParams.get('reply_comment_id');
+
+    let html = `<div class="flex flex-wrap gap-x-4 gap-y-1 items-center">`;
+    html += `<span>🔗 <strong>facebook.com</strong></span>`;
+    if (meta.type) html += `<span>${meta.type}</span>`;
+    if (meta.page) html += `<span>📄 Trang: <strong>${meta.page}</strong></span>`;
+    if (meta.group) html += `<span>👥 Nhóm: <strong>${meta.group}</strong></span>`;
+    if (meta.postId) html += `<span>Post ID: <code class="mono bg-blue-100 px-1 rounded">${meta.postId}</code></span>`;
+    if (meta.commentId) html += `<span>💬 Comment ID: <code class="mono bg-blue-100 px-1 rounded">${meta.commentId}</code></span>`;
+    html += `</div>`;
+    el.innerHTML = html;
+    el.classList.remove('hidden');
+  } catch(e) { el.classList.add('hidden'); }
+}
+
+function updateFbCharCount() {
+  const n = document.getElementById('fb-text').value.length;
+  const el = document.getElementById('fb-char-count');
+  el.textContent = n + ' ký tự';
+  el.className = 'text-xs ' + (n > 500 ? 'text-orange-500' : n > 128 ? 'text-amber-500' : 'text-slate-400');
+}
+
+function setFbTabular(l, c, s) {
+  document.getElementById('fb-likes').value    = l;
+  document.getElementById('fb-comments').value = c;
+  document.getElementById('fb-shares').value   = s;
+}
+
+function clearFbAnalysis() {
+  document.getElementById('fb-url').value = '';
+  document.getElementById('fb-text').value = '';
+  document.getElementById('fb-likes').value = 0;
+  document.getElementById('fb-comments').value = 0;
+  document.getElementById('fb-shares').value = 0;
+  document.getElementById('fb-char-count').textContent = '0 ký tự';
+  hide('fb-meta'); hide('fb-results'); hide('fb-error'); hide('fb-loading');
+}
+
+async function runFbCompare() {
+  const text = document.getElementById('fb-text').value.trim();
+  if (!text) { showErr('fb-error','fb-error-msg','Vui lòng paste nội dung bình luận từ Facebook vào ô phía trên.'); return; }
+
+  const likes    = +document.getElementById('fb-likes').value    || 0;
+  const comments = +document.getElementById('fb-comments').value || 0;
+  const shares   = +document.getElementById('fb-shares').value   || 0;
+  const url      = document.getElementById('fb-url').value.trim();
+
+  hide('fb-results'); hide('fb-error');
+  show('fb-loading');
+  document.getElementById('fb-compare-btn').disabled = true;
+
+  try {
+    const resp = await fetch('/predict/compare', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ text, likes, comments, shares }),
+    });
+    if (!resp.ok) { let msg=`HTTP ${resp.status}`; try { msg=(await resp.json()).detail||msg; } catch {} throw new Error(msg); }
+    const data = await resp.json();
+    hide('fb-loading');
+    renderFbResults(data, url);
+  } catch(e) {
+    hide('fb-loading');
+    showErr('fb-error','fb-error-msg','Lỗi: ' + e.message);
+  }
+  document.getElementById('fb-compare-btn').disabled = false;
+}
+
+function renderFbResults(data, url) {
+  // Context bar
+  const ctxEl = document.getElementById('fb-context-bar');
+  let ctx = `<span>📝 <strong>Văn bản:</strong> "${data.text_original.slice(0,60)}${data.text_original.length>60?'…':''}"</span>`;
+  if (url) ctx += `<span>🔗 <a href="${url}" target="_blank" class="underline hover:text-blue-600 break-all">${url.slice(0,60)}${url.length>60?'…':''}</a></span>`;
+  ctxEl.innerHTML = ctx;
+
+  // Normalization note
+  const normEl = document.getElementById('fb-norm-note');
+  if (data.text_original !== data.text_normalized) {
+    normEl.innerHTML = `⚙️ <strong>Teencode chuẩn hoá:</strong> <span class="mono">"${data.text_original}"</span> → <span class="mono text-emerald-700">"${data.text_normalized}"</span>`;
+    normEl.classList.remove('hidden');
+  } else { normEl.classList.add('hidden'); }
+
+  // 4 model cards (reuse renderCompare logic)
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = `<div id="compare-cards-tmp" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3"></div>`;
+  // Use the global renderCompare but redirect output
+  const origCards = document.getElementById('compare-cards');
+  const tmpId = 'fb-cards';
+  document.getElementById(tmpId).innerHTML = buildModelCards(data.results);
+
+  // Metrics table
+  const avail = data.results.filter(r => r.available);
+  const best = avail.length > 0 ? avail.reduce((a,b)=>a.confidence>b.confidence?a:b) : null;
+  document.getElementById('fb-metrics-tbody').innerHTML = data.results.map(r => {
+    const m = r.available ? (EMO[r.label] || {emoji:'?', vi: r.label}) : null;
+    const isBest = best && r.available && r.confidence === best.confidence;
+    const s = EXP_STYLE[r.model_id] || EXP_STYLE.tfidf;
+    return `<tr class="${isBest ? 'bg-indigo-50/50' : ''}">
+      <td>
+        <span class="font-semibold text-sm ${isBest ? 'text-indigo-700' : 'text-slate-800'}">${r.model_name}</span>
+        ${isBest ? '<span class="ml-1 tag bg-indigo-100 text-indigo-700 text-xs">Tốt nhất</span>' : ''}
+      </td>
+      <td class="text-center"><span class="text-xs text-slate-500">${r.backbone}</span></td>
+      <td class="text-right mono font-bold" style="color:${s.f1Color}">${r.known_f1}</td>
+      <td class="text-right mono text-slate-600">${r.known_acc}</td>
+      <td class="text-center">
+        ${r.available && m ? `<span class="emo-chip" style="background:${m.bg||'#f1f5f9'};color:${m.color||'#64748b'}">${m.emoji} ${m.vi}</span>` : '<span class="text-xs text-slate-400">—</span>'}
+      </td>
+      <td class="text-right">
+        ${r.available ? `<span class="mono font-bold" style="color:${(EMO[r.label]||{}).color||'#64748b'}">${(r.confidence*100).toFixed(1)}%</span>` : '<span class="text-xs text-slate-400">N/A</span>'}
+      </td>
+      <td class="text-center">
+        ${r.available ? '<span class="tag bg-emerald-100 text-emerald-700 text-xs">✓ Chạy được</span>' : '<span class="tag bg-slate-100 text-slate-500 text-xs">Không load</span>'}
+      </td>
+    </tr>`;
+  }).join('');
+
+  // Summary insights (reuse logic from renderCompare)
+  const allSame = avail.length > 0 && avail.every(r => r.label === avail[0].label);
+  const mTfidf = data.results.find(r => r.model_id==='tfidf');
+  const mXlmr  = data.results.find(r => r.model_id==='xlmr');
+  const mFusion= data.results.find(r => r.model_id==='fusion');
+  let parts = [];
+  if (allSame) {
+    parts.push(`✅ <strong>Tất cả ${avail.length} mô hình đồng thuận:</strong> dự đoán ${EMO[avail[0].label]?.emoji} <strong>${EMO[avail[0].label]?.vi}</strong>`);
+  } else {
+    const labels = [...new Set(avail.map(r=>r.label))];
+    parts.push(`⚠️ <strong>Các mô hình không đồng thuận:</strong> ${labels.map(l=>`${EMO[l]?.emoji} ${EMO[l]?.vi}`).join(' / ')}`);
+  }
+  if (best) parts.push(`🏆 <strong>Mô hình tự tin nhất:</strong> ${best.model_name} (${(best.confidence*100).toFixed(1)}%)`);
+  if (mFusion?.available) {
+    const f1Rank = data.results.filter(r=>r.available).sort((a,b)=>b.known_f1-a.known_f1)[0];
+    parts.push(`📊 <strong>F1-Macro cao nhất:</strong> ${f1Rank.model_name} (${f1Rank.known_f1})`);
+  }
+  if (mTfidf?.available && mXlmr?.available) {
+    const diff = (mXlmr.confidence - mTfidf.confidence)*100;
+    if (mTfidf.label !== mXlmr.label) {
+      parts.push(`🔄 <strong>Neural vs TF-IDF đổi nhãn:</strong> ${EMO[mTfidf.label]?.vi} → ${EMO[mXlmr.label]?.vi}`);
+    } else {
+      parts.push(`📈 <strong>XLM-R ${diff>=0?'tự tin hơn':'kém hơn'} TF-IDF:</strong> ${diff>=0?'+':''}${diff.toFixed(1)}%`);
+    }
+  }
+  document.getElementById('fb-summary').innerHTML = parts.join(' &nbsp;·&nbsp; ');
+
+  show('fb-results');
+}
+
+function buildModelCards(results) {
+  return results.map(r => {
+    const s = EXP_STYLE[r.model_id] || EXP_STYLE.tfidf;
+    const tagBadges = (r.tags||[]).map(t => {
+      const cls = t==='Deployed' ? 'bg-indigo-600 text-white' : t==='Best F1' ? 'bg-violet-600 text-white' : s.badgeCls;
+      return `<span class="tag ${cls} text-xs">${t}</span>`;
+    }).join('');
+    if (!r.available) {
+      return `<div class="rounded-xl border-2 p-4 flex flex-col" style="border-color:${s.border};background:${s.bg}">
+        <div class="font-bold text-slate-800 text-sm leading-tight mb-1">${r.model_name}</div>
+        <div class="text-xs text-slate-500 mb-2">${r.backbone}</div>
+        <div class="flex flex-wrap gap-1 mb-3">${tagBadges}</div>
+        <div class="flex-1 flex flex-col items-center justify-center py-5 rounded-lg bg-slate-100 mb-3">
+          <div class="text-3xl mb-1">🔒</div><div class="text-xs font-semibold text-slate-500">Không khả dụng</div>
+        </div>
+        <div class="space-y-1 pt-2 border-t border-slate-200 mt-auto">
+          <div class="flex justify-between text-xs"><span class="text-slate-500">F1-Macro</span><span class="font-bold mono" style="color:${s.f1Color}">${r.known_f1}</span></div>
+          <div class="flex justify-between text-xs"><span class="text-slate-500">Accuracy</span><span class="font-semibold mono text-slate-600">${r.known_acc}</span></div>
+        </div>
+      </div>`;
+    }
+    const m = EMO[r.label] || { emoji:'?', vi:r.label, color:'#64748b', bg:'#f1f5f9' };
+    const pct = (r.confidence*100).toFixed(1);
+    const sorted = ORDER.filter(k=>r.probs[k]!=null).sort((a,b)=>r.probs[b]-r.probs[a]);
+    return `<div class="rounded-xl border-2 p-4 flex flex-col" style="border-color:${s.border};background:${s.bg}">
+      <div class="font-bold text-slate-800 text-sm leading-tight mb-1">${r.model_name}</div>
+      <div class="text-xs text-slate-500 mb-2">${r.backbone}</div>
+      <div class="flex flex-wrap gap-1 mb-3">${tagBadges}</div>
+      <div class="rounded-lg py-3 px-2 text-center mb-3" style="background:${m.bg}">
+        <div class="text-2xl leading-none">${m.emoji}</div>
+        <div class="font-bold text-sm mt-1 leading-none" style="color:${m.color}">${m.vi}</div>
+        <div class="text-xl font-bold mono mt-1" style="color:${m.color}">${pct}%</div>
+      </div>
+      <div class="space-y-1.5 mb-3 flex-1">
+        ${sorted.slice(0,4).map(cls=>{
+          const e=EMO[cls]; const p=(r.probs[cls]*100).toFixed(1); const best=cls===r.label;
+          return `<div><div class="flex justify-between text-xs mb-0.5">
+            <span class="${best?'font-semibold text-slate-800':'text-slate-600'}">${e.emoji} ${e.vi}</span>
+            <span class="mono ${best?'font-bold':'font-normal'}" style="color:${e.color}">${p}%</span>
+          </div><div class="prob-track"><div class="prob-fill" style="width:${p}%;background:${e.color}"></div></div></div>`;
+        }).join('')}
+      </div>
+      <div class="space-y-1 pt-2 border-t border-slate-200 mt-auto">
+        <div class="flex justify-between text-xs"><span class="text-slate-500">F1-Macro</span><span class="font-bold mono" style="color:${s.f1Color}">${r.known_f1}</span></div>
+        <div class="flex justify-between text-xs"><span class="text-slate-500">Accuracy</span><span class="font-semibold mono text-slate-600">${r.known_acc}</span></div>
+      </div>
+      <div class="mt-2 text-xs text-slate-400 italic leading-relaxed">${r.note}</div>
+    </div>`;
+  }).join('');
+}
+
+function copyFbResults() {
+  const text    = document.getElementById('fb-text').value.trim();
+  const tbody   = document.getElementById('fb-metrics-tbody');
+  const summary = document.getElementById('fb-summary').innerText;
+  const rows    = [...tbody.querySelectorAll('tr')].map(r =>
+    [...r.querySelectorAll('td')].map(td=>td.innerText.trim()).join('\t')
+  ).join('\n');
+  const out = `Văn bản: ${text}\n\nKết quả so sánh:\n${rows}\n\nTóm tắt: ${summary}`;
+  navigator.clipboard.writeText(out).then(()=>alert('Đã copy kết quả vào clipboard!'));
 }
 
 // ── Lightbox ──
