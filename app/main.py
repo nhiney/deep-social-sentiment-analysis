@@ -15,9 +15,13 @@ POST /predict/explain → single-text inference + LIME token attribution
 from __future__ import annotations
 
 import contextlib
+import html as html_mod
 import logging
 import os
+import re
+import urllib.request as _ureq
 from pathlib import Path
+from urllib.parse import urlparse
 from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException, status
@@ -112,6 +116,11 @@ class BatchPredictResponse(BaseModel):
     n_texts: int
 
 
+class URLExtractRequest(BaseModel):
+    """Request payload for Facebook URL content extraction."""
+    url: str = Field(..., min_length=1)
+
+
 class CompareRequest(BaseModel):
     """Request payload for 4-model comparison."""
 
@@ -126,6 +135,23 @@ class CompareRequest(BaseModel):
         if not v.strip():
             raise ValueError("text must not be blank.")
         return v
+
+
+class CompareBatchRequest(BaseModel):
+    """Run a whole comment thread through the 4 architectures."""
+
+    texts: List[str] = Field(..., min_length=1, max_length=40)
+    likes: float = Field(default=0, ge=0)
+    comments: float = Field(default=0, ge=0)
+    shares: float = Field(default=0, ge=0)
+
+
+class SocialFetchRequest(BaseModel):
+    """Fetch public comments from a social-media URL."""
+
+    url: str = Field(..., min_length=1)
+    max_comments: int = Field(default=20, ge=1, le=40)
+    youtube_api_key: Optional[str] = Field(default=None)
 
 
 class HealthResponse(BaseModel):
@@ -253,6 +279,269 @@ def health() -> HealthResponse:
         checkpoint=checkpoint,
         class_names=CLASS_NAMES,
     )
+
+
+_FB_UA = "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)"
+_FB_DOMAINS = {"facebook.com", "fb.com", "fb.watch", "m.facebook.com"}
+
+
+def _og(html: str, prop: str) -> Optional[str]:
+    """Extract og:<prop> meta content and unescape HTML entities."""
+    m = re.search(
+        rf'<meta[^>]+property=["\']og:{prop}["\'][^>]+content=["\']([^"\']*)["\']',
+        html, re.I,
+    )
+    if not m:
+        m = re.search(
+            rf'<meta[^>]+content=["\']([^"\']*)["\'][^>]+property=["\']og:{prop}["\']',
+            html, re.I,
+        )
+    return html_mod.unescape(m.group(1)).strip() if m else None
+
+
+@app.post("/extract-url", tags=["utility"])
+def extract_url(payload: URLExtractRequest) -> Dict[str, Any]:
+    """Fetch a public Facebook post URL and return its og:description as text.
+
+    Uses the ``facebookexternalhit`` user-agent which Facebook whitelists for
+    crawling public posts — returns OG metadata including the post body.
+    Works for most public share links (``/share/p/...``, ``/posts/...``).
+    Private posts, comments requiring login, and Reels may not be extractable.
+    """
+    url = payload.url.strip()
+    try:
+        netloc = urlparse(url).netloc.lstrip("www.")
+    except Exception:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "URL không hợp lệ.")
+
+    if not any(netloc.endswith(d) for d in _FB_DOMAINS):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Chỉ hỗ trợ link Facebook.")
+
+    req_obj = _ureq.Request(url, headers={
+        "User-Agent": _FB_UA,
+        "Accept": "text/html,application/xhtml+xml",
+        "Accept-Language": "vi-VN,vi;q=0.9,en;q=0.8",
+    })
+    try:
+        with _ureq.urlopen(req_obj, timeout=12) as resp:
+            final_url = resp.url
+            html_content = resp.read(120_000).decode("utf-8", errors="ignore")
+    except Exception as exc:
+        return {"success": False, "text": "", "title": "", "final_url": url,
+                "message": f"Không tải được trang: {exc}"}
+
+    desc  = _og(html_content, "description")
+    title = _og(html_content, "title") or ""
+
+    if desc:
+        return {
+            "success": True,
+            "text": desc,
+            "title": title,
+            "final_url": final_url,
+            "message": f"Đã tải nội dung từ bài viết của {title or 'người dùng'}.",
+        }
+    return {
+        "success": False, "text": "", "title": title, "final_url": final_url,
+        "message": "Không tìm thấy nội dung văn bản. Bài viết có thể ở chế độ riêng tư hoặc yêu cầu đăng nhập — vui lòng paste thủ công.",
+    }
+
+
+# --------------------------------------------------------------------------- #
+# Multi-platform comment fetching
+# --------------------------------------------------------------------------- #
+_YT_DOMAINS = {"youtube.com", "youtu.be", "m.youtube.com", "youtube-nocookie.com"}
+_RD_DOMAINS = {"reddit.com", "redd.it"}
+_BROWSER_UA = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/120.0 Safari/537.36"
+)
+
+
+def _extract_youtube_id(url: str) -> Optional[str]:
+    """Pull the 11-char video id out of any YouTube URL form."""
+    m = re.search(r"(?:v=|/shorts/|/embed/|youtu\.be/)([A-Za-z0-9_-]{11})", url)
+    if m:
+        return m.group(1)
+    m = re.search(r"[?&]v=([A-Za-z0-9_-]{11})", url)
+    return m.group(1) if m else None
+
+
+def _http_json(url: str, headers: Dict[str, str], timeout: int = 12) -> Any:
+    """GET a URL and parse JSON, raising on transport error."""
+    import json as _json
+    req_obj = _ureq.Request(url, headers=headers)
+    with _ureq.urlopen(req_obj, timeout=timeout) as resp:
+        return _json.loads(resp.read().decode("utf-8", errors="ignore"))
+
+
+def _fetch_youtube_comments(url: str, max_n: int, api_key: Optional[str]) -> Dict[str, Any]:
+    """Read top public comments via YouTube Data API v3 (no OAuth needed)."""
+    key = api_key or os.environ.get("YOUTUBE_API_KEY")
+    vid = _extract_youtube_id(url)
+    if not vid:
+        return {"success": False, "comments": [], "source_title": "",
+                "message": "Không tìm thấy video ID trong link YouTube."}
+    if not key:
+        return {"success": False, "comments": [], "source_title": "",
+                "message": "Cần YouTube Data API key (miễn phí, lấy tại console.cloud.google.com → bật YouTube Data API v3). "
+                           "Dán key vào ô '🔑 API key' hoặc đặt biến môi trường YOUTUBE_API_KEY."}
+    from urllib.parse import urlencode
+    qs = urlencode({
+        "part": "snippet", "videoId": vid, "maxResults": min(max_n, 50),
+        "order": "relevance", "textFormat": "plainText", "key": key,
+    })
+    api = f"https://www.googleapis.com/youtube/v3/commentThreads?{qs}"
+    try:
+        data = _http_json(api, {"User-Agent": _BROWSER_UA, "Accept": "application/json"})
+    except Exception as exc:
+        return {"success": False, "comments": [], "source_title": "",
+                "message": f"YouTube API lỗi: {exc}. Kiểm tra API key / quota / video có bật bình luận không."}
+    comments = []
+    for item in data.get("items", [])[:max_n]:
+        sn = item.get("snippet", {}).get("topLevelComment", {}).get("snippet", {})
+        txt = (sn.get("textDisplay") or "").strip()
+        if txt:
+            comments.append({
+                "author": sn.get("authorDisplayName", "—"),
+                "text": txt,
+                "likes": int(sn.get("likeCount", 0) or 0),
+            })
+    if not comments:
+        return {"success": False, "comments": [], "source_title": "",
+                "message": "Video không có bình luận công khai hoặc đã tắt bình luận."}
+    return {"success": True, "comments": comments, "source_title": f"YouTube video {vid}",
+            "message": f"Đã đọc {len(comments)} bình luận thật từ YouTube."}
+
+
+def _fetch_reddit_comments(url: str, max_n: int) -> Dict[str, Any]:
+    """Read a Reddit thread's comments via the public .json endpoint (no key).
+
+    Reddit increasingly 403s automated reads from datacenter IPs; we try a
+    couple of host/UA variants and fall back to a clear "paste manually"
+    message so the demo never dead-ends.
+    """
+    clean = url.split("?")[0].rstrip("/")
+    path = clean.split("reddit.com", 1)[-1] if "reddit.com" in clean else clean
+    suffix = "/.json?limit=" + str(min(max_n + 5, 100)) + "&raw_json=1"
+    candidates = [clean + suffix]
+    for host in ("https://www.reddit.com", "https://old.reddit.com"):
+        cand = host + path + suffix
+        if cand not in candidates:
+            candidates.append(cand)
+    headers = {"User-Agent": _BROWSER_UA, "Accept": "application/json"}
+
+    data, last_exc = None, None
+    for api in candidates:
+        try:
+            data = _http_json(api, headers)
+            break
+        except Exception as exc:
+            last_exc = exc
+    if data is None:
+        return {"success": False, "comments": [], "source_title": "",
+                "message": f"Reddit chặn đọc tự động từ máy chủ này ({last_exc}). "
+                           "Reddit thường chặn IP máy chủ — hãy mở thread, copy bình luận và dán thủ công, "
+                           "hoặc thử lại trên mạng khác."}
+    if not isinstance(data, list) or len(data) < 2:
+        return {"success": False, "comments": [], "source_title": "",
+                "message": "Không đọc được bình luận — hãy dùng link tới thread cụ thể."}
+    title = ""
+    try:
+        title = data[0]["data"]["children"][0]["data"].get("title", "")
+    except Exception:
+        pass
+    comments = []
+    for child in data[1].get("data", {}).get("children", []):
+        d = child.get("data", {})
+        body = (d.get("body") or "").strip()
+        if body and body not in ("[deleted]", "[removed]"):
+            comments.append({
+                "author": d.get("author", "—"),
+                "text": body,
+                "likes": int(d.get("score", 0) or 0),
+            })
+        if len(comments) >= max_n:
+            break
+    if not comments:
+        return {"success": False, "comments": [], "source_title": title,
+                "message": "Thread chưa có bình luận hiển thị công khai."}
+    return {"success": True, "comments": comments, "source_title": title or "Reddit thread",
+            "message": f"Đã đọc {len(comments)} bình luận thật từ Reddit (không cần API key)."}
+
+
+def _fetch_facebook_post(url: str) -> Dict[str, Any]:
+    """Facebook blocks comment scraping — return the public post body via OG tags."""
+    req_obj = _ureq.Request(url, headers={
+        "User-Agent": _FB_UA,
+        "Accept": "text/html,application/xhtml+xml",
+        "Accept-Language": "vi-VN,vi;q=0.9,en;q=0.8",
+    })
+    try:
+        with _ureq.urlopen(req_obj, timeout=12) as resp:
+            html_content = resp.read(120_000).decode("utf-8", errors="ignore")
+    except Exception as exc:
+        return {"success": False, "comments": [], "source_title": "",
+                "message": f"Không tải được trang Facebook: {exc}"}
+    desc = _og(html_content, "description")
+    title = _og(html_content, "title") or ""
+    if desc:
+        return {"success": True, "comments": [{"author": title or "Bài viết", "text": desc, "likes": 0}],
+                "source_title": title,
+                "message": "Facebook chặn đọc bình luận tự động — chỉ lấy được nội dung bài viết công khai. "
+                           "Để phân tích bình luận, hãy copy thủ công và dán vào ô bên dưới."}
+    return {"success": False, "comments": [], "source_title": title,
+            "message": "Bài viết riêng tư hoặc yêu cầu đăng nhập — vui lòng dán nội dung thủ công."}
+
+
+@app.post("/social/fetch", tags=["utility"])
+def social_fetch(payload: SocialFetchRequest) -> Dict[str, Any]:
+    """Fetch public comments from a social-media URL.
+
+    Platform support (by ease of access, no login required):
+
+    * **YouTube** — real comments via Data API v3 (free API key).
+    * **Reddit**  — real comments via the public ``.json`` endpoint (no key).
+    * **Facebook** — post body only (comments are login-gated).
+    """
+    url = payload.url.strip()
+    try:
+        netloc = urlparse(url).netloc.lstrip("www.").lower()
+    except Exception:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "URL không hợp lệ.")
+    if not netloc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "URL không hợp lệ.")
+
+    def _match(domains: set) -> bool:
+        return any(netloc == d or netloc.endswith("." + d) for d in domains)
+
+    if _match(_YT_DOMAINS):
+        platform, res = "youtube", _fetch_youtube_comments(url, payload.max_comments, payload.youtube_api_key)
+    elif _match(_RD_DOMAINS):
+        platform, res = "reddit", _fetch_reddit_comments(url, payload.max_comments)
+    elif _match(_FB_DOMAINS):
+        platform, res = "facebook", _fetch_facebook_post(url)
+    else:
+        # Platforms that block automated comment reads — recognize the URL and
+        # guide the user to paste, so the selector feels complete.
+        _paste_only = {
+            "tiktok.com": "tiktok", "instagram.com": "instagram",
+            "threads.net": "threads", "twitter.com": "twitter", "x.com": "twitter",
+        }
+        matched = next((name for dom, name in _paste_only.items()
+                        if netloc == dom or netloc.endswith("." + dom)), None)
+        if matched:
+            return {"success": False, "platform": matched, "comments": [], "n": 0,
+                    "source_title": "", "final_url": url,
+                    "message": f"{matched.capitalize()} chặn đọc bình luận tự động (cần đăng nhập/API riêng). "
+                               "Hãy mở bài viết, copy bình luận và dán vào ô bên dưới — phần phân tích 4 mô hình vẫn chạy đầy đủ."}
+        return {"success": False, "platform": "unknown", "comments": [], "n": 0,
+                "source_title": "", "final_url": url,
+                "message": "Nền tảng chưa nhận diện. Đọc tự động: YouTube, Reddit, Facebook (chỉ bài viết). "
+                           "Với nền tảng khác, hãy dán bình luận thủ công."}
+
+    res.update({"platform": platform, "final_url": url, "n": len(res.get("comments", []))})
+    return res
 
 
 @app.post("/predict", response_model=PredictResponse, tags=["inference"])
@@ -519,4 +808,128 @@ def predict_compare(payload: CompareRequest) -> Dict[str, Any]:
         "text_original": text,
         "text_normalized": normalized_text,
         "results": results,
+    }
+
+
+# Static per-architecture metadata (kept in sync with /predict/compare).
+_MODEL_STATIC = [
+    {"model_id": "tfidf", "model_name": "TF-IDF + LogReg",
+     "backbone": "TF-IDF (1-2 gram) + Logistic Regression",
+     "tags": ["Baseline", "Teencode ✓", "Nhẹ ~5MB"], "known_f1": 0.6401, "known_acc": 0.6327,
+     "is_deployed": False,
+     "note": "Bag-of-words truyền thống — nhanh nhưng không hiểu ngữ cảnh."},
+    {"model_id": "xlmr", "model_name": "XLM-R only",
+     "backbone": "XLM-RoBERTa-base (text branch)",
+     "tags": ["Teencode ✓", "Neural"], "known_f1": 0.6548, "known_acc": 0.6647,
+     "is_deployed": False,
+     "note": "Chỉ nhánh text (XLM-R). Hiểu ngữ nghĩa & ngữ cảnh sâu."},
+    {"model_id": "fttransformer", "model_name": "FT-Transformer only",
+     "backbone": "FT-Transformer (tabular branch)",
+     "tags": ["Tabular ✓", "Hành vi"], "known_f1": 0.5200, "known_acc": 0.5500,
+     "is_deployed": False,
+     "note": "Chỉ đặc trưng hành vi (likes, độ dài...). Text embedding = 0."},
+    {"model_id": "fusion", "model_name": "Teencode + XLM-R + FT Fusion",
+     "backbone": "XLM-R + FT-Transformer → MLP Fusion",
+     "tags": ["Teencode ✓", "Text ✓", "Tabular ✓", "Deployed"], "known_f1": 0.6877, "known_acc": 0.7020,
+     "is_deployed": True,
+     "note": "Mô hình đầy đủ đang chạy — kết hợp text + hành vi."},
+]
+
+
+@app.post("/predict/compare/batch", tags=["inference"])
+def predict_compare_batch(payload: CompareBatchRequest) -> Dict[str, Any]:
+    """Run a whole comment thread through all 4 architectures.
+
+    Powers the social-media dashboard: per-model predictions for every
+    comment, the thread's emotion distribution, average confidence, and how
+    often each model agrees with the deployed Fusion model on this thread.
+    """
+    predictor = _require_predictor()
+    texts = [t.strip() for t in payload.texts if t and t.strip()]
+    if not texts:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY,
+                            "Tất cả bình luận đều rỗng.")
+
+    tab_overrides = {"likes": payload.likes, "comments": payload.comments, "shares": payload.shares}
+    texts_norm = [predictor.normalizer(t) if predictor.normalizer else t for t in texts]
+
+    # Compute per-model probability matrices (each: list of result dicts).
+    per_model_results: Dict[str, Optional[List[Dict[str, Any]]]] = {}
+
+    # 1. TF-IDF
+    if _tfidf_model is not None:
+        from src.preprocessing import TeencodeNormalizer as _TN
+        _norm = _TN()
+        norm = [_norm(t) for t in texts]
+        proba = _tfidf_model.predict_proba(norm)
+        classes = list(_tfidf_model.pipeline.classes_)
+        rows = []
+        for row in proba:
+            top = int(row.argmax())
+            rows.append({"label": classes[top], "confidence": float(row[top]),
+                         "probs": {c: float(row[i]) for i, c in enumerate(classes)}})
+        per_model_results["tfidf"] = rows
+    else:
+        per_model_results["tfidf"] = None
+
+    # 2. XLM-R only
+    try:
+        per_model_results["xlmr"] = predictor._probs_to_results(
+            predictor.predict_text_branch_only(texts))
+    except Exception as exc:
+        logger.warning("XLM-R batch branch failed: %s", exc)
+        per_model_results["xlmr"] = None
+
+    # 3. FT-Transformer only
+    try:
+        per_model_results["fttransformer"] = predictor._probs_to_results(
+            predictor.predict_tabular_branch_only(texts, tabular_overrides=tab_overrides))
+    except Exception as exc:
+        logger.warning("FT-Transformer batch branch failed: %s", exc)
+        per_model_results["fttransformer"] = None
+
+    # 4. Fusion (deployed)
+    per_model_results["fusion"] = predictor.predict(texts, tabular_overrides=tab_overrides)
+
+    fusion_labels = [r["label"] for r in per_model_results["fusion"]]
+
+    def _round_probs(p: Dict[str, float]) -> Dict[str, float]:
+        return {k: round(v, 6) for k, v in p.items()}
+
+    models_out = []
+    for meta in _MODEL_STATIC:
+        rows = per_model_results.get(meta["model_id"])
+        available = rows is not None
+        preds, dist, avg_conf, agree = [], {c: 0 for c in CLASS_NAMES}, 0.0, 0
+        if available:
+            for i, r in enumerate(rows):
+                preds.append({"label": r["label"], "confidence": round(r["confidence"], 6),
+                              "probs": _round_probs(r["probs"])})
+                dist[r["label"]] = dist.get(r["label"], 0) + 1
+                avg_conf += r["confidence"]
+                if r["label"] == fusion_labels[i]:
+                    agree += 1
+            avg_conf = round(avg_conf / len(rows), 6)
+            agree = round(agree / len(rows), 4)
+        models_out.append({**meta, "available": available, "predictions": preds,
+                           "distribution": dist, "avg_confidence": avg_conf,
+                           "agreement_with_deployed": agree})
+
+    # Thread-level consensus: per comment, how many available models agree with Fusion.
+    avail_ids = [m["model_id"] for m in models_out if m["available"]]
+    full_agree = 0
+    for i in range(len(texts)):
+        labels_here = {mid: per_model_results[mid][i]["label"] for mid in avail_ids}
+        if len(set(labels_here.values())) == 1:
+            full_agree += 1
+
+    return {
+        "texts": texts,
+        "texts_normalized": texts_norm,
+        "n": len(texts),
+        "class_names": CLASS_NAMES,
+        "thread_distribution": {c: fusion_labels.count(c) for c in CLASS_NAMES},
+        "unanimous_count": full_agree,
+        "unanimous_ratio": round(full_agree / len(texts), 4),
+        "models": models_out,
     }

@@ -40,6 +40,20 @@
   .prob-track { height:5px; background:#f1f5f9; border-radius:3px; overflow:hidden; }
   .prob-fill { height:100%; border-radius:3px; transition:width .5s cubic-bezier(.4,0,.2,1); }
 
+  /* Social platform selector */
+  .sp-plat-btn { display:flex; align-items:center; gap:6px; padding:8px 14px; font-size:.8125rem; font-weight:600; color:#475569; background:#f8fafc; border:1.5px solid var(--border); border-radius:9px; cursor:pointer; transition:all .15s; }
+  .sp-plat-btn:hover { border-color:#c7d2fe; background:#fff; }
+  .sp-plat-btn.active { color:var(--indigo); border-color:var(--indigo); background:var(--indigo-light); box-shadow:0 1px 3px rgba(79,70,229,.12); }
+  .sp-badge { font-size:.625rem; font-weight:600; padding:1px 6px; border-radius:6px; }
+  .sp-badge-good { background:#dcfce7; color:#15803d; }
+  .sp-badge-warn { background:#fef3c7; color:#b45309; }
+  /* Distribution + leaderboard bars */
+  .dist-track { height:22px; background:#f1f5f9; border-radius:6px; overflow:hidden; flex:1; }
+  .dist-fill { height:100%; border-radius:6px; display:flex; align-items:center; justify-content:flex-end; padding-right:6px; color:#fff; font-size:.6875rem; font-weight:700; transition:width .6s cubic-bezier(.4,0,.2,1); min-width:2px; }
+  .lb-rank { width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:.9rem; flex-shrink:0; }
+  .agree-cell { text-align:center; white-space:nowrap; }
+  .agree-diff { box-shadow:inset 0 0 0 2px #fda4af; border-radius:6px; }
+
   /* Status dot */
   .dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
   .dot-ok  { background:#22c55e; box-shadow:0 0 0 3px rgba(34,197,94,.18); }
@@ -164,8 +178,8 @@
       Phương pháp
     </button>
     <button class="nav-tab" id="btn-facebook" onclick="switchTab('facebook')">
-      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-      Facebook
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.76c0 1.6 1.123 2.994 2.707 3.227 1.068.157 2.148.279 3.238.364.466.037.893.281 1.153.671L12 21l2.652-3.978c.26-.39.687-.634 1.153-.671 1.09-.085 2.17-.207 3.238-.364 1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg>
+      Mạng xã hội
     </button>
   </div>
 </nav>
@@ -1496,159 +1510,176 @@ Thi xong rồi, nhẹ người hẳn!
 <!-- ══════════════════════════════════════════════ -->
 <div id="tab-facebook" class="tab-pane space-y-5">
 
-  <!-- ── Hướng dẫn + URL Input ── -->
+  <!-- ── Intro + Platform selector + URL input ── -->
   <div class="card">
-    <div class="section-title">Phân tích bình luận Facebook — So sánh 4 mô hình</div>
+    <div class="section-title">Phân tích cảm xúc bình luận mạng xã hội — Đối chiếu 4 mô hình</div>
+    <p class="text-xs text-slate-500 leading-relaxed mb-4">
+      Dán link bài viết → tự động đọc bình luận thật → 4 kiến trúc cùng phân loại cảm xúc →
+      bảng xếp hạng cho thấy <strong>mô hình nào nhận biết tốt hơn</strong>, đồng thuận tới đâu, và xử lý case khó (teencode, mỉa mai) ra sao.
+    </p>
 
-    <!-- Workflow steps -->
-    <div class="flex items-start gap-6 mb-5 p-4 bg-slate-50 rounded-lg flex-wrap">
-      <div class="flex items-start gap-2 flex-1 min-w-36">
-        <div class="step-num flex-shrink-0">1</div>
-        <div><div class="text-xs font-semibold text-slate-700">Paste link Facebook</div><div class="text-xs text-slate-500 mt-0.5">Bài viết hoặc bình luận</div></div>
-      </div>
-      <div class="text-slate-300 self-center hidden sm:block">→</div>
-      <div class="flex items-start gap-2 flex-1 min-w-36">
-        <div class="step-num flex-shrink-0">2</div>
-        <div><div class="text-xs font-semibold text-slate-700">Copy nội dung từ FB</div><div class="text-xs text-slate-500 mt-0.5">Paste vào ô bên dưới</div></div>
-      </div>
-      <div class="text-slate-300 self-center hidden sm:block">→</div>
-      <div class="flex items-start gap-2 flex-1 min-w-36">
-        <div class="step-num flex-shrink-0">3</div>
-        <div><div class="text-xs font-semibold text-slate-700">Nhấn So sánh</div><div class="text-xs text-slate-500 mt-0.5">Xem kết quả 4 mô hình</div></div>
-      </div>
-      <div class="text-slate-300 self-center hidden sm:block">→</div>
-      <div class="flex items-start gap-2 flex-1 min-w-36">
-        <div class="step-num flex-shrink-0">4</div>
-        <div><div class="text-xs font-semibold text-slate-700">So sánh chỉ số</div><div class="text-xs text-slate-500 mt-0.5">F1, Accuracy, Confidence</div></div>
-      </div>
+    <!-- Platform selector -->
+    <div class="flex flex-wrap gap-2 mb-4" id="sp-platforms">
+      <button data-platform="youtube"   onclick="selectPlatform('youtube')"   class="sp-plat-btn">▶️ YouTube <span class="sp-badge sp-badge-good">Dễ nhất</span></button>
+      <button data-platform="reddit"    onclick="selectPlatform('reddit')"    class="sp-plat-btn">👽 Reddit <span class="sp-badge sp-badge-good">Không cần key</span></button>
+      <button data-platform="facebook"  onclick="selectPlatform('facebook')"  class="sp-plat-btn">📘 Facebook <span class="sp-badge sp-badge-warn">Chỉ bài viết</span></button>
+      <button data-platform="tiktok"    onclick="selectPlatform('tiktok')"    class="sp-plat-btn">🎵 TikTok <span class="sp-badge sp-badge-warn">Dán tay</span></button>
+      <button data-platform="twitter"   onclick="selectPlatform('twitter')"   class="sp-plat-btn">𝕏 Twitter <span class="sp-badge sp-badge-warn">Dán tay</span></button>
+      <button data-platform="instagram" onclick="selectPlatform('instagram')" class="sp-plat-btn">📸 Instagram <span class="sp-badge sp-badge-warn">Dán tay</span></button>
+      <button data-platform="threads"   onclick="selectPlatform('threads')"   class="sp-plat-btn">🧵 Threads <span class="sp-badge sp-badge-warn">Dán tay</span></button>
+      <button data-platform="paste"     onclick="selectPlatform('paste')"     class="sp-plat-btn">📋 Dán thủ công</button>
     </div>
 
-    <!-- URL Input -->
-    <div class="mb-3">
-      <label class="block text-xs font-semibold text-slate-500 mb-1.5">🔗 Link bài viết / bình luận Facebook</label>
+    <!-- Platform hint -->
+    <div id="sp-hint" class="mb-3 p-3 rounded-lg text-xs flex items-start gap-2 bg-blue-50 border border-blue-100 text-blue-800"></div>
+
+    <!-- URL row -->
+    <div id="sp-url-row" class="mb-3">
+      <label class="block text-xs font-semibold text-slate-500 mb-1.5">🔗 Link bài viết</label>
       <div class="flex gap-2">
-        <input id="fb-url" type="url" class="form-input flex-1 text-sm"
-               placeholder="https://www.facebook.com/..."
-               oninput="parseFbUrl(this.value)">
-        <button onclick="parseFbUrl(document.getElementById('fb-url').value)"
-                class="btn-secondary flex-shrink-0">Đọc URL</button>
+        <input id="sp-url" type="url" class="form-input flex-1 text-sm"
+               placeholder="https://www.youtube.com/watch?v=..."
+               onkeydown="if(event.key==='Enter') fetchSocialContent()">
+        <button onclick="fetchSocialContent()" id="sp-fetch-btn"
+                class="btn-primary flex-shrink-0 flex items-center gap-1.5" style="width:auto;padding:8px 16px">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+          Đọc bình luận
+        </button>
       </div>
-    </div>
 
-    <!-- URL Parsed Metadata -->
-    <div id="fb-meta" class="hidden mb-3 p-3 bg-blue-50 border border-blue-100 rounded-lg text-xs text-blue-800"></div>
-
-    <!-- Warning -->
-    <div class="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-      <div class="flex items-start gap-2">
-        <span class="text-base flex-shrink-0">⚠️</span>
-        <div class="text-xs text-amber-800">
-          <strong>Facebook bảo vệ nội dung bằng đăng nhập</strong> — không thể tự động đọc text bình luận.<br>
-          Vui lòng <strong>mở link trên Facebook</strong>, copy nội dung bình luận và <strong>paste vào ô bên dưới</strong>.
+      <!-- YouTube API key (only youtube) -->
+      <div id="sp-yt-key-row" class="hidden mt-2">
+        <div class="flex gap-2 items-center">
+          <input id="sp-yt-key" type="password" class="form-input flex-1 text-sm mono"
+                 placeholder="🔑 YouTube Data API key (lưu trên trình duyệt của bạn)" oninput="saveYtKey()">
         </div>
+        <p class="text-xs text-slate-400 mt-1">Lấy miễn phí: <code class="mono">console.cloud.google.com</code> → bật <strong>YouTube Data API v3</strong> → Tạo API key. Key chỉ lưu cục bộ (localStorage), không gửi đi đâu khác.</p>
       </div>
     </div>
 
-    <!-- Text input -->
-    <div class="mb-4">
-      <div class="flex items-center justify-between mb-1.5">
-        <label class="text-xs font-semibold text-slate-500">📝 Nội dung bình luận (paste từ Facebook)</label>
-        <span id="fb-char-count" class="text-xs text-slate-400">0 ký tự</span>
-      </div>
-      <textarea id="fb-text" rows="4" class="form-input resize-none w-full text-sm"
-                oninput="updateFbCharCount()"
-                placeholder="Copy text bình luận từ Facebook và paste vào đây...&#10;Ví dụ: Sản phẩm này tệ quá, đặt hàng 2 tuần mà chưa nhận được, CSKH không bắt máy!!!"></textarea>
+    <!-- fetch status -->
+    <div id="sp-fetch-status" class="hidden mb-1 p-3 rounded-lg text-xs flex items-start gap-2"></div>
+  </div>
+
+  <!-- ── Comments workspace ── -->
+  <div class="card">
+    <div class="flex items-center justify-between mb-1.5 flex-wrap gap-2">
+      <label class="text-xs font-semibold text-slate-500">💬 Bình luận cần phân tích <span class="text-slate-400 font-normal">— mỗi dòng là 1 bình luận</span></label>
+      <span id="sp-count" class="text-xs text-slate-400">0 bình luận</span>
     </div>
 
-    <!-- Tabular + example presets -->
-    <div class="mb-4">
+    <!-- Hard-case sample threads -->
+    <div class="flex flex-wrap gap-1.5 mb-2">
+      <span class="text-xs text-slate-400 self-center mr-1">⚡ Nạp thread mẫu:</span>
+      <button onclick="loadSampleThread('teencode')" class="tag bg-violet-100 text-violet-700 text-xs hover:bg-violet-200 cursor-pointer">Teencode</button>
+      <button onclick="loadSampleThread('sarcasm')"  class="tag bg-amber-100 text-amber-700 text-xs hover:bg-amber-200 cursor-pointer">Mỉa mai</button>
+      <button onclick="loadSampleThread('south')"    class="tag bg-emerald-100 text-emerald-700 text-xs hover:bg-emerald-200 cursor-pointer">Tiếng lóng miền Nam</button>
+      <button onclick="loadSampleThread('mixed')"    class="tag bg-blue-100 text-blue-700 text-xs hover:bg-blue-200 cursor-pointer">Đa cảm xúc</button>
+    </div>
+
+    <textarea id="sp-comments" rows="7" class="form-input resize-none w-full text-sm"
+              oninput="updateSpCount()"
+              placeholder="Sản phẩm này tệ quá, đặt 2 tuần chưa nhận được!&#10;Giao hàng nhanh ghê, đóng gói kỹ, 10 điểm!&#10;Ờ thì cũng được, không có gì đặc biệt.&#10;..."></textarea>
+
+    <!-- Engagement (optional) -->
+    <div class="mt-3">
       <div class="flex items-center justify-between mb-1.5">
-        <label class="text-xs font-semibold text-slate-500">Tương tác bài viết (tuỳ chọn)</label>
+        <label class="text-xs font-semibold text-slate-500">Tương tác bài viết <span class="text-slate-400 font-normal">(cho nhánh hành vi — tuỳ chọn)</span></label>
         <div class="flex gap-1.5">
-          <button onclick="setFbTabular(0,0,0)" class="tag bg-slate-100 text-slate-600 text-xs hover:bg-slate-200 cursor-pointer">Không</button>
-          <button onclick="setFbTabular(50,10,5)" class="tag bg-blue-100 text-blue-700 text-xs hover:bg-blue-200 cursor-pointer">Bình thường</button>
-          <button onclick="setFbTabular(5000,800,300)" class="tag bg-orange-100 text-orange-700 text-xs hover:bg-orange-200 cursor-pointer">🔥 Viral</button>
+          <button onclick="setSpTabular(0,0,0)" class="tag bg-slate-100 text-slate-600 text-xs hover:bg-slate-200 cursor-pointer">Không</button>
+          <button onclick="setSpTabular(50,10,5)" class="tag bg-blue-100 text-blue-700 text-xs hover:bg-blue-200 cursor-pointer">Bình thường</button>
+          <button onclick="setSpTabular(5000,800,300)" class="tag bg-orange-100 text-orange-700 text-xs hover:bg-orange-200 cursor-pointer">🔥 Viral</button>
         </div>
       </div>
       <div class="grid grid-cols-3 gap-3">
-        <div>
-          <label class="block text-xs text-slate-400 mb-1">👍 Likes</label>
-          <input type="number" id="fb-likes" min="0" value="0" class="form-input text-sm">
-        </div>
-        <div>
-          <label class="block text-xs text-slate-400 mb-1">💬 Comments</label>
-          <input type="number" id="fb-comments" min="0" value="0" class="form-input text-sm">
-        </div>
-        <div>
-          <label class="block text-xs text-slate-400 mb-1">🔁 Shares</label>
-          <input type="number" id="fb-shares" min="0" value="0" class="form-input text-sm">
-        </div>
+        <div><label class="block text-xs text-slate-400 mb-1">👍 Likes</label><input type="number" id="sp-likes" min="0" value="0" class="form-input text-sm"></div>
+        <div><label class="block text-xs text-slate-400 mb-1">💬 Comments</label><input type="number" id="sp-comments-n" min="0" value="0" class="form-input text-sm"></div>
+        <div><label class="block text-xs text-slate-400 mb-1">🔁 Shares</label><input type="number" id="sp-shares" min="0" value="0" class="form-input text-sm"></div>
       </div>
     </div>
 
-    <button onclick="runFbCompare()" id="fb-compare-btn"
-            class="btn-primary flex items-center justify-center gap-2">
+    <button onclick="runThreadAnalysis()" id="sp-run-btn" class="btn-primary flex items-center justify-center gap-2 mt-4">
       <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-      So sánh 4 mô hình ngay
+      Phân tích & so sánh 4 mô hình
     </button>
   </div>
 
-  <!-- Loading -->
-  <div id="fb-loading" class="hidden card flex items-center gap-3 py-6">
+  <!-- Loading / Error -->
+  <div id="sp-loading" class="hidden card flex items-center gap-3 py-6">
     <div class="spinner"></div>
-    <span class="text-sm text-slate-500">Đang chạy 3 cấu hình mô hình...</span>
+    <span class="text-sm text-slate-500">Đang chạy 4 kiến trúc trên toàn bộ bình luận...</span>
   </div>
+  <div id="sp-error" class="hidden card border-red-200"><p class="text-sm text-red-600" id="sp-error-msg"></p></div>
 
-  <!-- Error -->
-  <div id="fb-error" class="hidden card border-red-200">
-    <p class="text-sm text-red-600" id="fb-error-msg"></p>
-  </div>
+  <!-- ══════════ RESULTS ══════════ -->
+  <div id="sp-results" class="hidden space-y-5">
 
-  <!-- Results -->
-  <div id="fb-results" class="hidden space-y-4">
-
-    <!-- Context bar -->
-    <div id="fb-context-bar" class="card bg-blue-50 border border-blue-100 text-xs text-blue-800 flex flex-wrap gap-3 items-center"></div>
-
-    <!-- Normalization note -->
-    <div id="fb-norm-note" class="hidden p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800"></div>
-
-    <!-- 4 model cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3" id="fb-cards"></div>
-
-    <!-- Metrics comparison table -->
+    <!-- 1. Thread emotion picture -->
     <div class="card">
-      <div class="section-title">Bảng so sánh chỉ số — 4 mô hình</div>
+      <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
+        <div class="section-title mb-0">🎭 Bức tranh cảm xúc của thread</div>
+        <span id="sp-thread-meta" class="text-xs text-slate-400"></span>
+      </div>
+      <div id="sp-headline" class="rounded-lg p-4 mb-4 flex items-center gap-3"></div>
+      <div id="sp-dist" class="space-y-2"></div>
+    </div>
+
+    <!-- 2. Model leaderboard -->
+    <div class="card">
+      <div class="section-title">🏆 Bảng xếp hạng mô hình — model nào nhận biết tốt hơn?</div>
+      <p class="text-xs text-slate-500 mb-4">Xếp theo <strong>F1-Macro</strong> (đánh giá trên tập test). Bên phải là chỉ số <em>trực tiếp trên thread bạn vừa nhập</em>: độ tự tin trung bình và tỉ lệ đồng thuận với mô hình đang chạy (Fusion).</p>
+      <div id="sp-leaderboard" class="space-y-2.5 mb-4"></div>
       <div class="overflow-x-auto -mx-5 px-5">
-        <table class="data-table" id="fb-metrics-table">
-          <thead>
-            <tr>
-              <th>Mô hình</th>
-              <th class="text-center">Kiến trúc</th>
-              <th class="text-right">F1-Macro ↑</th>
-              <th class="text-right">Accuracy ↑</th>
-              <th class="text-center">Dự đoán</th>
-              <th class="text-right">Confidence</th>
-              <th class="text-center">Trạng thái</th>
-            </tr>
-          </thead>
-          <tbody id="fb-metrics-tbody"></tbody>
+        <table class="data-table" id="sp-metrics-table">
+          <thead><tr>
+            <th>Mô hình</th><th class="text-center">Kiến trúc</th>
+            <th class="text-right">F1-Macro ↑</th><th class="text-right">Accuracy ↑</th>
+            <th class="text-right">Conf. TB (thread)</th><th class="text-right">Đồng thuận Fusion</th>
+            <th class="text-center">Trạng thái</th>
+          </tr></thead>
+          <tbody id="sp-metrics-tbody"></tbody>
         </table>
       </div>
     </div>
 
-    <!-- Insight summary -->
-    <div id="fb-summary" class="p-3 bg-indigo-50 border border-indigo-100 rounded-lg text-xs text-slate-700 leading-relaxed"></div>
+    <!-- 2b. Per-model prediction distribution -->
+    <div class="card">
+      <div class="section-title">📊 Mỗi mô hình "nhìn" thread thế nào? — phân bố dự đoán</div>
+      <p class="text-xs text-slate-500 mb-4">So sánh cách 4 kiến trúc gán nhãn cho cùng một thread. Mô hình tốt cho phân bố <strong>gần với Fusion</strong>; mô hình yếu thường <strong>sụp về một nhãn</strong> (ví dụ FT-Transformer chỉ dùng đặc trưng hành vi nên hay dồn về một cảm xúc).</p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3" id="sp-model-dists"></div>
+    </div>
 
-    <!-- Action buttons -->
+    <!-- 3. Agreement / disagreement analysis -->
+    <div class="card">
+      <div class="flex items-center justify-between flex-wrap gap-2 mb-1">
+        <div class="section-title mb-0">🤝 Phân tích đồng thuận — soi từng bình luận</div>
+        <span id="sp-unanimous" class="text-xs"></span>
+      </div>
+      <p class="text-xs text-slate-500 mb-3">Ô có viền <span class="px-1 rounded ring-2 ring-rose-300">đỏ</span> = mô hình đó dự đoán <strong>khác</strong> Fusion → đây thường là case khó (mỉa mai, teencode, mơ hồ) bộc lộ điểm yếu của từng kiến trúc.</p>
+      <div class="overflow-x-auto -mx-5 px-5">
+        <table class="data-table" id="sp-agree-table">
+          <thead><tr id="sp-agree-head"></tr></thead>
+          <tbody id="sp-agree-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 4. Insight summary -->
+    <div id="sp-summary" class="p-3 bg-indigo-50 border border-indigo-100 rounded-lg text-xs text-slate-700 leading-relaxed"></div>
+
+    <!-- Actions -->
     <div class="flex gap-3">
-      <button onclick="clearFbAnalysis()" class="btn-secondary flex items-center gap-1.5 text-xs">
+      <button onclick="clearThreadAnalysis()" class="btn-secondary flex items-center gap-1.5 text-xs">
         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>
         Phân tích mới
       </button>
-      <button onclick="copyFbResults()" class="btn-secondary flex items-center gap-1.5 text-xs">
+      <button onclick="copyThreadResults()" class="btn-secondary flex items-center gap-1.5 text-xs">
         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"/></svg>
         Copy kết quả
+      </button>
+      <button onclick="exportThreadCSV()" class="btn-secondary flex items-center gap-1.5 text-xs">
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+        Tải CSV
       </button>
     </div>
   </div>
@@ -2155,236 +2186,387 @@ function showErr(containerId, msgId, msg) {
   show(containerId);
 }
 
-// ── Facebook tab ──
-function parseFbUrl(url) {
-  const el = document.getElementById('fb-meta');
-  if (!url || !url.includes('facebook.com')) { el.classList.add('hidden'); return; }
-  try {
-    const u = new URL(url);
-    const parts = u.pathname.split('/').filter(Boolean);
-    const meta = {};
+// ── Social media tab (multi-platform comment analyzer) ──
+let SP_PLATFORM = 'youtube';
+let spData = null;
 
-    // Type detection
-    if (u.pathname.includes('/photo')) meta.type = '🖼 Ảnh';
-    else if (u.pathname.includes('/video') || u.pathname.includes('/reel')) meta.type = '🎬 Video/Reel';
-    else if (u.pathname.includes('/groups')) meta.type = '👥 Bài viết nhóm';
-    else if (u.pathname.includes('/permalink') || parts.includes('posts')) meta.type = '📝 Bài viết';
-    else meta.type = '📌 Bài viết / Bình luận';
+const PLATFORM_INFO = {
+  youtube: {
+    placeholder: 'https://www.youtube.com/watch?v=...',
+    hint: '▶️ <strong>YouTube — dễ nhất để lấy bình luận tiếng Việt thật.</strong> Dán link video, hệ thống gọi YouTube Data API v3 đọc top bình luận. Cần API key miễn phí (dán ở ô bên dưới).',
+    cls: 'bg-red-50 border-red-100 text-red-800',
+  },
+  reddit: {
+    placeholder: 'https://www.reddit.com/r/.../comments/...',
+    hint: '👽 <strong>Reddit — không cần API key.</strong> Dán link một thread cụ thể (chứa <code class="mono">/comments/</code>), hệ thống đọc trực tiếp qua endpoint <code class="mono">.json</code> công khai. (Bình luận chủ yếu tiếng Anh — vẫn phân loại được.)',
+    cls: 'bg-orange-50 border-orange-100 text-orange-800',
+  },
+  facebook: {
+    placeholder: 'https://www.facebook.com/share/p/...',
+    hint: '📘 <strong>Facebook chặn đọc bình luận tự động</strong> (cần đăng nhập/Graph API). Chỉ lấy được <strong>nội dung bài viết</strong> công khai. Muốn phân tích bình luận → copy thủ công rồi dán vào ô bên dưới.',
+    cls: 'bg-blue-50 border-blue-100 text-blue-800',
+  },
+  tiktok: {
+    placeholder: '', fetchable: false,
+    hint: '🎵 <strong>TikTok chặn đọc bình luận tự động.</strong> Mở video → copy phần bình luận → dán vào ô bên dưới. Phần so sánh 4 mô hình vẫn chạy đầy đủ.',
+    cls: 'bg-pink-50 border-pink-100 text-pink-800',
+  },
+  twitter: {
+    placeholder: '', fetchable: false,
+    hint: '𝕏 <strong>Twitter/X siết API (trả phí).</strong> Copy nội dung reply/tweet rồi dán vào ô bên dưới để phân tích.',
+    cls: 'bg-slate-50 border-slate-200 text-slate-700',
+  },
+  instagram: {
+    placeholder: '', fetchable: false,
+    hint: '📸 <strong>Instagram chặn đọc bình luận tự động</strong> (cần Graph API). Copy bình luận rồi dán vào ô bên dưới.',
+    cls: 'bg-fuchsia-50 border-fuchsia-100 text-fuchsia-800',
+  },
+  threads: {
+    placeholder: '', fetchable: false,
+    hint: '🧵 <strong>Threads chưa có API công khai.</strong> Copy bình luận rồi dán vào ô bên dưới để phân tích.',
+    cls: 'bg-slate-50 border-slate-200 text-slate-700',
+  },
+  paste: {
+    placeholder: '', fetchable: false,
+    hint: '📋 <strong>Dán thủ công</strong> — copy bình luận từ bất kỳ nền tảng nào (mỗi dòng 1 bình luận) vào ô bên dưới. Cách này luôn chạy được, không phụ thuộc mạng.',
+    cls: 'bg-slate-50 border-slate-200 text-slate-700',
+  },
+};
+const SP_FETCHABLE = new Set(['youtube', 'reddit', 'facebook']);
 
-    // Page / group
-    if (parts[0] === 'groups' && parts[1]) meta.group = parts[1];
-    else if (parts[0] && !['photo','video','reel','permalink','story'].includes(parts[0])) meta.page = parts[0];
+const SAMPLE_THREADS = {
+  teencode: [
+    'sp này chán vc, ko đáng tiền',
+    'giao hàng nhanh vl, ưng cái bụng :))',
+    'ko hiểu sao mn chê, mik thấy oke phết',
+    'mua xong hơi hối hận, cũng tạm thoii',
+    'shop tl tin nhắn nhanh, 10đ ko có nhưng',
+  ],
+  sarcasm: [
+    'Ồ tuyệt vời, ship 3 tuần mới tới, dịch vụ "đỉnh" thật.',
+    'Cảm ơn shop đã gửi nhầm size, trải nghiệm "khó quên" ghê.',
+    'Hàng đẹp lắm, đẹp tới mức tôi phải trả lại ngay.',
+    'Chất lượng "miễn chê", chê không nổi vì hỏng rồi.',
+    'Đúng là tiền nào của nấy, rẻ thật nên hỏng thật.',
+  ],
+  south: [
+    'Trời ơi món này ngon bá cháy luôn á nha!',
+    'Quán này chảnh dữ, đợi muốn xỉu mà đồ ăn dở ẹc.',
+    'Mèn ơi rẻ quá xá, mua liền tay nha mọi người.',
+    'Nay buồn xo, người yêu giận hổng thèm nói chuyện.',
+    'Hết hồn luôn, tưởng gì hoá ra cũng thường thôi hà.',
+  ],
+  mixed: [
+    'Sản phẩm này tệ quá, đặt 2 tuần chưa nhận được, CSKH không bắt máy!',
+    'Giao hàng siêu nhanh, đóng gói cẩn thận, rất hài lòng!',
+    'Cũng được, không có gì đặc biệt để khen hay chê.',
+    'Sợ thật, đọc review thấy nhiều người bị lừa quá.',
+    'Wow không ngờ giá rẻ vậy mà chất lượng ổn áp ghê!',
+    'Ghê quá, mở hộp ra thấy mốc meo cả rồi.',
+  ],
+};
 
-    // IDs
-    meta.postId = u.searchParams.get('story_fbid') || u.searchParams.get('fbid') ||
-                  u.searchParams.get('id') || parts.find(p => /^\d{6,}$/.test(p));
-    meta.commentId = u.searchParams.get('comment_id') || u.searchParams.get('reply_comment_id');
-
-    let html = `<div class="flex flex-wrap gap-x-4 gap-y-1 items-center">`;
-    html += `<span>🔗 <strong>facebook.com</strong></span>`;
-    if (meta.type) html += `<span>${meta.type}</span>`;
-    if (meta.page) html += `<span>📄 Trang: <strong>${meta.page}</strong></span>`;
-    if (meta.group) html += `<span>👥 Nhóm: <strong>${meta.group}</strong></span>`;
-    if (meta.postId) html += `<span>Post ID: <code class="mono bg-blue-100 px-1 rounded">${meta.postId}</code></span>`;
-    if (meta.commentId) html += `<span>💬 Comment ID: <code class="mono bg-blue-100 px-1 rounded">${meta.commentId}</code></span>`;
-    html += `</div>`;
-    el.innerHTML = html;
-    el.classList.remove('hidden');
-  } catch(e) { el.classList.add('hidden'); }
+function selectPlatform(p) {
+  SP_PLATFORM = p;
+  document.querySelectorAll('#sp-platforms .sp-plat-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.platform === p));
+  const info = PLATFORM_INFO[p];
+  const hintEl = document.getElementById('sp-hint');
+  hintEl.className = 'mb-3 p-3 rounded-lg text-xs flex items-start gap-2 border ' + info.cls;
+  hintEl.innerHTML = '<span>' + info.hint + '</span>';
+  document.getElementById('sp-url-row').classList.toggle('hidden', !SP_FETCHABLE.has(p));
+  document.getElementById('sp-yt-key-row').classList.toggle('hidden', p !== 'youtube');
+  document.getElementById('sp-url').placeholder = info.placeholder;
 }
 
-function updateFbCharCount() {
-  const n = document.getElementById('fb-text').value.length;
-  const el = document.getElementById('fb-char-count');
-  el.textContent = n + ' ký tự';
-  el.className = 'text-xs ' + (n > 500 ? 'text-orange-500' : n > 128 ? 'text-amber-500' : 'text-slate-400');
+function saveYtKey() {
+  try { localStorage.setItem('yt_api_key', document.getElementById('sp-yt-key').value.trim()); } catch (e) {}
 }
 
-function setFbTabular(l, c, s) {
-  document.getElementById('fb-likes').value    = l;
-  document.getElementById('fb-comments').value = c;
-  document.getElementById('fb-shares').value   = s;
+function spStatus(ok, msg) {
+  const el = document.getElementById('sp-fetch-status');
+  el.className = 'mb-1 p-3 rounded-lg text-xs flex items-start gap-2 border ' +
+    (ok ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-amber-50 border-amber-200 text-amber-800');
+  el.innerHTML = '<span class="flex-shrink-0">' + (ok ? '✅' : '⚠️') + '</span><span>' + msg + '</span>';
+  el.classList.remove('hidden');
 }
 
-function clearFbAnalysis() {
-  document.getElementById('fb-url').value = '';
-  document.getElementById('fb-text').value = '';
-  document.getElementById('fb-likes').value = 0;
-  document.getElementById('fb-comments').value = 0;
-  document.getElementById('fb-shares').value = 0;
-  document.getElementById('fb-char-count').textContent = '0 ký tự';
-  hide('fb-meta'); hide('fb-results'); hide('fb-error'); hide('fb-loading');
-}
+async function fetchSocialContent() {
+  const url = document.getElementById('sp-url').value.trim();
+  if (!url) { spStatus(false, 'Vui lòng dán link bài viết.'); return; }
+  const btn = document.getElementById('sp-fetch-btn');
+  btn.disabled = true; btn.style.opacity = '.6';
+  spStatus(true, 'Đang đọc bình luận...');
 
-async function runFbCompare() {
-  const text = document.getElementById('fb-text').value.trim();
-  if (!text) { showErr('fb-error','fb-error-msg','Vui lòng paste nội dung bình luận từ Facebook vào ô phía trên.'); return; }
-
-  const likes    = +document.getElementById('fb-likes').value    || 0;
-  const comments = +document.getElementById('fb-comments').value || 0;
-  const shares   = +document.getElementById('fb-shares').value   || 0;
-  const url      = document.getElementById('fb-url').value.trim();
-
-  hide('fb-results'); hide('fb-error');
-  show('fb-loading');
-  document.getElementById('fb-compare-btn').disabled = true;
-
-  try {
-    const resp = await fetch('/predict/compare', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ text, likes, comments, shares }),
-    });
-    if (!resp.ok) { let msg=`HTTP ${resp.status}`; try { msg=(await resp.json()).detail||msg; } catch {} throw new Error(msg); }
-    const data = await resp.json();
-    hide('fb-loading');
-    renderFbResults(data, url);
-  } catch(e) {
-    hide('fb-loading');
-    showErr('fb-error','fb-error-msg','Lỗi: ' + e.message);
+  const body = { url, max_comments: 25 };
+  if (SP_PLATFORM === 'youtube') {
+    const k = document.getElementById('sp-yt-key').value.trim();
+    if (k) body.youtube_api_key = k;
   }
-  document.getElementById('fb-compare-btn').disabled = false;
+  try {
+    const resp = await fetch('/social/fetch', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await resp.json();
+    if (data.success && data.comments && data.comments.length) {
+      const lines = data.comments.map(c => c.text.replace(/\s+/g, ' ').trim());
+      document.getElementById('sp-comments').value = lines.join('\n');
+      updateSpCount();
+      let extra = data.source_title ? ' · <em>' + escapeHtml(data.source_title.slice(0, 60)) + '</em>' : '';
+      spStatus(true, data.message + extra);
+    } else {
+      spStatus(false, data.message || 'Không đọc được bình luận tự động — hãy dán thủ công.');
+    }
+  } catch (e) {
+    spStatus(false, 'Lỗi kết nối: ' + e.message);
+  }
+  btn.disabled = false; btn.style.opacity = '1';
 }
 
-function renderFbResults(data, url) {
-  // Context bar
-  const ctxEl = document.getElementById('fb-context-bar');
-  let ctx = `<span>📝 <strong>Văn bản:</strong> "${data.text_original.slice(0,60)}${data.text_original.length>60?'…':''}"</span>`;
-  if (url) ctx += `<span>🔗 <a href="${url}" target="_blank" class="underline hover:text-blue-600 break-all">${url.slice(0,60)}${url.length>60?'…':''}</a></span>`;
-  ctxEl.innerHTML = ctx;
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+}
 
-  // Normalization note
-  const normEl = document.getElementById('fb-norm-note');
-  if (data.text_original !== data.text_normalized) {
-    normEl.innerHTML = `⚙️ <strong>Teencode chuẩn hoá:</strong> <span class="mono">"${data.text_original}"</span> → <span class="mono text-emerald-700">"${data.text_normalized}"</span>`;
-    normEl.classList.remove('hidden');
-  } else { normEl.classList.add('hidden'); }
+function updateSpCount() {
+  const n = document.getElementById('sp-comments').value.split('\n').filter(l => l.trim()).length;
+  document.getElementById('sp-count').textContent = n + ' bình luận';
+}
 
-  // 4 model cards (reuse renderCompare logic)
-  const tempDiv = document.createElement('div');
-  tempDiv.innerHTML = `<div id="compare-cards-tmp" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3"></div>`;
-  // Use the global renderCompare but redirect output
-  const origCards = document.getElementById('compare-cards');
-  const tmpId = 'fb-cards';
-  document.getElementById(tmpId).innerHTML = buildModelCards(data.results);
+function setSpTabular(l, c, s) {
+  document.getElementById('sp-likes').value = l;
+  document.getElementById('sp-comments-n').value = c;
+  document.getElementById('sp-shares').value = s;
+}
 
-  // Metrics table
-  const avail = data.results.filter(r => r.available);
-  const best = avail.length > 0 ? avail.reduce((a,b)=>a.confidence>b.confidence?a:b) : null;
-  document.getElementById('fb-metrics-tbody').innerHTML = data.results.map(r => {
-    const m = r.available ? (EMO[r.label] || {emoji:'?', vi: r.label}) : null;
-    const isBest = best && r.available && r.confidence === best.confidence;
-    const s = EXP_STYLE[r.model_id] || EXP_STYLE.tfidf;
-    return `<tr class="${isBest ? 'bg-indigo-50/50' : ''}">
-      <td>
-        <span class="font-semibold text-sm ${isBest ? 'text-indigo-700' : 'text-slate-800'}">${r.model_name}</span>
-        ${isBest ? '<span class="ml-1 tag bg-indigo-100 text-indigo-700 text-xs">Tốt nhất</span>' : ''}
-      </td>
-      <td class="text-center"><span class="text-xs text-slate-500">${r.backbone}</span></td>
-      <td class="text-right mono font-bold" style="color:${s.f1Color}">${r.known_f1}</td>
-      <td class="text-right mono text-slate-600">${r.known_acc}</td>
-      <td class="text-center">
-        ${r.available && m ? `<span class="emo-chip" style="background:${m.bg||'#f1f5f9'};color:${m.color||'#64748b'}">${m.emoji} ${m.vi}</span>` : '<span class="text-xs text-slate-400">—</span>'}
-      </td>
-      <td class="text-right">
-        ${r.available ? `<span class="mono font-bold" style="color:${(EMO[r.label]||{}).color||'#64748b'}">${(r.confidence*100).toFixed(1)}%</span>` : '<span class="text-xs text-slate-400">N/A</span>'}
-      </td>
-      <td class="text-center">
-        ${r.available ? '<span class="tag bg-emerald-100 text-emerald-700 text-xs">✓ Chạy được</span>' : '<span class="tag bg-slate-100 text-slate-500 text-xs">Không load</span>'}
-      </td>
+function loadSampleThread(key) {
+  document.getElementById('sp-comments').value = SAMPLE_THREADS[key].join('\n');
+  updateSpCount();
+  selectPlatform('paste');
+  spStatus(true, 'Đã nạp thread mẫu — bấm "Phân tích & so sánh 4 mô hình".');
+}
+
+async function runThreadAnalysis() {
+  const lines = document.getElementById('sp-comments').value.split('\n').map(l => l.trim()).filter(Boolean);
+  if (!lines.length) { showErr('sp-error', 'sp-error-msg', 'Chưa có bình luận nào để phân tích.'); return; }
+  if (lines.length > 40) { showErr('sp-error', 'sp-error-msg', 'Tối đa 40 bình luận mỗi lần. Hiện có ' + lines.length + '.'); return; }
+
+  const likes = +document.getElementById('sp-likes').value || 0;
+  const comments = +document.getElementById('sp-comments-n').value || 0;
+  const shares = +document.getElementById('sp-shares').value || 0;
+
+  hide('sp-results'); hide('sp-error'); show('sp-loading');
+  const btn = document.getElementById('sp-run-btn'); btn.disabled = true;
+  try {
+    const resp = await fetch('/predict/compare/batch', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ texts: lines, likes, comments, shares }),
+    });
+    if (!resp.ok) { let m = `HTTP ${resp.status}`; try { m = (await resp.json()).detail || m; } catch {} throw new Error(m); }
+    spData = await resp.json();
+    hide('sp-loading');
+    renderThreadResults(spData);
+  } catch (e) {
+    hide('sp-loading');
+    showErr('sp-error', 'sp-error-msg', 'Lỗi: ' + e.message);
+  }
+  btn.disabled = false;
+}
+
+function renderThreadResults(d) {
+  const total = d.n;
+  document.getElementById('sp-thread-meta').textContent = total + ' bình luận · 4 mô hình';
+
+  // ── 1. Thread emotion distribution (deployed Fusion labels) ──
+  const dist = d.thread_distribution;
+  const sorted = ORDER.filter(k => dist[k] > 0).sort((a, b) => dist[b] - dist[a]);
+  const top = sorted[0];
+  const tm = EMO[top];
+  const negSum = (dist.anger || 0) + (dist.sadness || 0) + (dist.disgust || 0) + (dist.fear || 0);
+  const posSum = (dist.joy || 0) + (dist.surprise || 0);
+  let tone = negSum > posSum ? '🔴 Thiên về <strong>tiêu cực</strong>' : posSum > negSum ? '🟢 Thiên về <strong>tích cực</strong>' : '⚪ <strong>Cân bằng</strong>';
+  const head = document.getElementById('sp-headline');
+  head.style.background = tm.bg;
+  head.innerHTML =
+    `<span class="text-4xl">${tm.emoji}</span>
+     <div>
+       <div class="text-sm text-slate-500">Cảm xúc chủ đạo của thread</div>
+       <div class="text-xl font-bold" style="color:${tm.color}">${tm.vi}
+         <span class="text-sm font-medium text-slate-500">— ${dist[top]}/${total} bình luận (${(dist[top] / total * 100).toFixed(0)}%)</span>
+       </div>
+       <div class="text-xs text-slate-500 mt-0.5">${tone} · Mô hình Fusion đang chạy phân loại</div>
+     </div>`;
+  const maxC = Math.max(...sorted.map(k => dist[k]));
+  document.getElementById('sp-dist').innerHTML = sorted.map(k => {
+    const e = EMO[k], w = (dist[k] / maxC * 100);
+    return `<div class="flex items-center gap-3">
+      <span class="text-xs font-medium text-slate-600 w-24 flex-shrink-0">${e.emoji} ${e.vi}</span>
+      <div class="dist-track"><div class="dist-fill" style="width:${w}%;background:${e.color}">${dist[k]}</div></div>
+      <span class="text-xs mono text-slate-400 w-10 text-right">${(dist[k] / total * 100).toFixed(0)}%</span>
+    </div>`;
+  }).join('');
+
+  // ── 2. Leaderboard (ranked by F1) ──
+  const ranked = [...d.models].sort((a, b) => b.known_f1 - a.known_f1);
+  const maxF1 = Math.max(...d.models.map(m => m.known_f1));
+  const medals = ['🥇', '🥈', '🥉', '4️⃣'];
+  const medalBg = ['#fef9c3', '#f1f5f9', '#ffedd5', '#f8fafc'];
+  const medalFg = ['#a16207', '#475569', '#c2410c', '#94a3b8'];
+  document.getElementById('sp-leaderboard').innerHTML = ranked.map((m, i) => {
+    const s = EXP_STYLE[m.model_id] || EXP_STYLE.tfidf;
+    const f1w = (m.known_f1 / maxF1 * 100).toFixed(0);
+    const conf = m.available ? (m.avg_confidence * 100).toFixed(0) + '%' : '—';
+    const agree = m.available ? (m.agreement_with_deployed * 100).toFixed(0) + '%' : '—';
+    const deployTag = m.is_deployed ? '<span class="tag bg-indigo-600 text-white text-xs">Đang chạy</span>' : '';
+    return `<div class="flex items-center gap-3 p-2.5 rounded-lg border ${i === 0 ? 'border-amber-200 bg-amber-50/40' : 'border-slate-100'}">
+      <div class="lb-rank" style="background:${medalBg[i]};color:${medalFg[i]}">${medals[i]}</div>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="font-semibold text-sm text-slate-800">${m.model_name}</span>${deployTag}
+        </div>
+        <div class="flex items-center gap-2 mt-1">
+          <div class="prob-track flex-1" style="max-width:160px"><div class="prob-fill" style="width:${f1w}%;background:${s.f1Color}"></div></div>
+          <span class="mono text-xs font-bold" style="color:${s.f1Color}">F1 ${m.known_f1.toFixed(4)}</span>
+        </div>
+      </div>
+      <div class="text-right flex-shrink-0">
+        <div class="text-xs text-slate-400">Conf TB / Đồng thuận</div>
+        <div class="text-sm font-semibold text-slate-700 mono">${conf} · ${agree}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // metrics table
+  document.getElementById('sp-metrics-tbody').innerHTML = d.models.map(m => {
+    const s = EXP_STYLE[m.model_id] || EXP_STYLE.tfidf;
+    const conf = m.available ? (m.avg_confidence * 100).toFixed(1) + '%' : '—';
+    const agree = m.available ? (m.agreement_with_deployed * 100).toFixed(0) + '%' : '—';
+    return `<tr class="${m.is_deployed ? 'bg-indigo-50/40' : ''}">
+      <td><span class="font-semibold text-sm ${m.is_deployed ? 'text-indigo-700' : 'text-slate-800'}">${m.model_name}</span></td>
+      <td class="text-center"><span class="text-xs text-slate-500">${m.backbone}</span></td>
+      <td class="text-right mono font-bold" style="color:${s.f1Color}">${m.known_f1.toFixed(4)}</td>
+      <td class="text-right mono text-slate-600">${m.known_acc.toFixed(4)}</td>
+      <td class="text-right mono text-slate-700">${conf}</td>
+      <td class="text-right mono text-slate-700">${m.is_deployed ? '<span class="text-slate-300">— ref —</span>' : agree}</td>
+      <td class="text-center">${m.available ? '<span class="tag bg-emerald-100 text-emerald-700 text-xs">✓ Chạy được</span>' : '<span class="tag bg-slate-100 text-slate-500 text-xs">Không load</span>'}</td>
     </tr>`;
   }).join('');
 
-  // Summary insights (reuse logic from renderCompare)
-  const allSame = avail.length > 0 && avail.every(r => r.label === avail[0].label);
-  const mTfidf = data.results.find(r => r.model_id==='tfidf');
-  const mXlmr  = data.results.find(r => r.model_id==='xlmr');
-  const mFusion= data.results.find(r => r.model_id==='fusion');
-  let parts = [];
-  if (allSame) {
-    parts.push(`✅ <strong>Tất cả ${avail.length} mô hình đồng thuận:</strong> dự đoán ${EMO[avail[0].label]?.emoji} <strong>${EMO[avail[0].label]?.vi}</strong>`);
-  } else {
-    const labels = [...new Set(avail.map(r=>r.label))];
-    parts.push(`⚠️ <strong>Các mô hình không đồng thuận:</strong> ${labels.map(l=>`${EMO[l]?.emoji} ${EMO[l]?.vi}`).join(' / ')}`);
-  }
-  if (best) parts.push(`🏆 <strong>Mô hình tự tin nhất:</strong> ${best.model_name} (${(best.confidence*100).toFixed(1)}%)`);
-  if (mFusion?.available) {
-    const f1Rank = data.results.filter(r=>r.available).sort((a,b)=>b.known_f1-a.known_f1)[0];
-    parts.push(`📊 <strong>F1-Macro cao nhất:</strong> ${f1Rank.model_name} (${f1Rank.known_f1})`);
-  }
-  if (mTfidf?.available && mXlmr?.available) {
-    const diff = (mXlmr.confidence - mTfidf.confidence)*100;
-    if (mTfidf.label !== mXlmr.label) {
-      parts.push(`🔄 <strong>Neural vs TF-IDF đổi nhãn:</strong> ${EMO[mTfidf.label]?.vi} → ${EMO[mXlmr.label]?.vi}`);
-    } else {
-      parts.push(`📈 <strong>XLM-R ${diff>=0?'tự tin hơn':'kém hơn'} TF-IDF:</strong> ${diff>=0?'+':''}${diff.toFixed(1)}%`);
+  // ── 2b. Per-model prediction distribution ──
+  document.getElementById('sp-model-dists').innerHTML = d.models.map(m => {
+    const s = EXP_STYLE[m.model_id] || EXP_STYLE.tfidf;
+    if (!m.available) {
+      return `<div class="rounded-xl border-2 p-3" style="border-color:${s.border};background:${s.bg}">
+        <div class="font-semibold text-sm text-slate-700 mb-1">${m.model_name}</div>
+        <div class="text-xs text-slate-400 py-6 text-center">🔒 Không khả dụng</div></div>`;
     }
-  }
-  document.getElementById('fb-summary').innerHTML = parts.join(' &nbsp;·&nbsp; ');
-
-  show('fb-results');
-}
-
-function buildModelCards(results) {
-  return results.map(r => {
-    const s = EXP_STYLE[r.model_id] || EXP_STYLE.tfidf;
-    const tagBadges = (r.tags||[]).map(t => {
-      const cls = t==='Deployed' ? 'bg-indigo-600 text-white' : t==='Best F1' ? 'bg-violet-600 text-white' : s.badgeCls;
-      return `<span class="tag ${cls} text-xs">${t}</span>`;
-    }).join('');
-    if (!r.available) {
-      return `<div class="rounded-xl border-2 p-4 flex flex-col" style="border-color:${s.border};background:${s.bg}">
-        <div class="font-bold text-slate-800 text-sm leading-tight mb-1">${r.model_name}</div>
-        <div class="text-xs text-slate-500 mb-2">${r.backbone}</div>
-        <div class="flex flex-wrap gap-1 mb-3">${tagBadges}</div>
-        <div class="flex-1 flex flex-col items-center justify-center py-5 rounded-lg bg-slate-100 mb-3">
-          <div class="text-3xl mb-1">🔒</div><div class="text-xs font-semibold text-slate-500">Không khả dụng</div>
-        </div>
-        <div class="space-y-1 pt-2 border-t border-slate-200 mt-auto">
-          <div class="flex justify-between text-xs"><span class="text-slate-500">F1-Macro</span><span class="font-bold mono" style="color:${s.f1Color}">${r.known_f1}</span></div>
-          <div class="flex justify-between text-xs"><span class="text-slate-500">Accuracy</span><span class="font-semibold mono text-slate-600">${r.known_acc}</span></div>
-        </div>
-      </div>`;
-    }
-    const m = EMO[r.label] || { emoji:'?', vi:r.label, color:'#64748b', bg:'#f1f5f9' };
-    const pct = (r.confidence*100).toFixed(1);
-    const sorted = ORDER.filter(k=>r.probs[k]!=null).sort((a,b)=>r.probs[b]-r.probs[a]);
-    return `<div class="rounded-xl border-2 p-4 flex flex-col" style="border-color:${s.border};background:${s.bg}">
-      <div class="font-bold text-slate-800 text-sm leading-tight mb-1">${r.model_name}</div>
-      <div class="text-xs text-slate-500 mb-2">${r.backbone}</div>
-      <div class="flex flex-wrap gap-1 mb-3">${tagBadges}</div>
-      <div class="rounded-lg py-3 px-2 text-center mb-3" style="background:${m.bg}">
-        <div class="text-2xl leading-none">${m.emoji}</div>
-        <div class="font-bold text-sm mt-1 leading-none" style="color:${m.color}">${m.vi}</div>
-        <div class="text-xl font-bold mono mt-1" style="color:${m.color}">${pct}%</div>
+    const ks = ORDER.filter(k => m.distribution[k] > 0).sort((a, b) => m.distribution[b] - m.distribution[a]);
+    const mx = Math.max(...ks.map(k => m.distribution[k]));
+    const distinct = ks.length;
+    return `<div class="rounded-xl border-2 p-3 flex flex-col" style="border-color:${s.border};background:${s.bg}">
+      <div class="flex items-center justify-between mb-2">
+        <div class="font-semibold text-sm text-slate-800">${m.model_name}</div>
+        ${m.is_deployed ? '<span class="tag bg-indigo-600 text-white text-xs">Chuẩn</span>' : ''}
       </div>
-      <div class="space-y-1.5 mb-3 flex-1">
-        ${sorted.slice(0,4).map(cls=>{
-          const e=EMO[cls]; const p=(r.probs[cls]*100).toFixed(1); const best=cls===r.label;
-          return `<div><div class="flex justify-between text-xs mb-0.5">
-            <span class="${best?'font-semibold text-slate-800':'text-slate-600'}">${e.emoji} ${e.vi}</span>
-            <span class="mono ${best?'font-bold':'font-normal'}" style="color:${e.color}">${p}%</span>
-          </div><div class="prob-track"><div class="prob-fill" style="width:${p}%;background:${e.color}"></div></div></div>`;
-        }).join('')}
+      <div class="space-y-1.5 flex-1">
+        ${ks.map(k => { const e = EMO[k], w = (m.distribution[k] / mx * 100).toFixed(0);
+          return `<div class="flex items-center gap-1.5">
+            <span class="text-xs w-16 flex-shrink-0 truncate" style="color:${e.color}">${e.emoji} ${e.vi}</span>
+            <div class="prob-track flex-1"><div class="prob-fill" style="width:${w}%;background:${e.color}"></div></div>
+            <span class="mono text-xs text-slate-500 w-4 text-right">${m.distribution[k]}</span>
+          </div>`; }).join('')}
       </div>
-      <div class="space-y-1 pt-2 border-t border-slate-200 mt-auto">
-        <div class="flex justify-between text-xs"><span class="text-slate-500">F1-Macro</span><span class="font-bold mono" style="color:${s.f1Color}">${r.known_f1}</span></div>
-        <div class="flex justify-between text-xs"><span class="text-slate-500">Accuracy</span><span class="font-semibold mono text-slate-600">${r.known_acc}</span></div>
-      </div>
-      <div class="mt-2 text-xs text-slate-400 italic leading-relaxed">${r.note}</div>
+      <div class="mt-2 pt-2 border-t border-slate-200 text-xs text-slate-400">${distinct} loại cảm xúc · conf TB ${(m.avg_confidence * 100).toFixed(0)}%</div>
     </div>`;
   }).join('');
+
+  // ── 3. Agreement table ──
+  const avail = d.models.filter(m => m.available);
+  document.getElementById('sp-agree-head').innerHTML =
+    `<th style="min-width:30px">#</th><th style="min-width:220px">Bình luận</th>` +
+    avail.map(m => `<th class="text-center">${m.model_name.replace(' Fusion', '')}${m.is_deployed ? ' ★' : ''}</th>`).join('');
+  const fusion = d.models.find(m => m.model_id === 'fusion');
+  document.getElementById('sp-agree-tbody').innerHTML = d.texts.map((t, i) => {
+    const short = t.length > 70 ? t.slice(0, 70) + '…' : t;
+    const fLabel = fusion && fusion.available ? fusion.predictions[i].label : null;
+    const cells = avail.map(m => {
+      const p = m.predictions[i];
+      const e = EMO[p.label] || EMO.neutral;
+      const diff = fLabel && !m.is_deployed && p.label !== fLabel;
+      return `<td class="agree-cell"><span class="emo-chip ${diff ? 'agree-diff' : ''}" style="background:${e.bg};color:${e.color}" title="${(p.confidence * 100).toFixed(0)}%">${e.emoji} ${e.vi}</span></td>`;
+    }).join('');
+    return `<tr><td class="mono text-slate-400 text-xs">${i + 1}</td><td class="text-xs" title="${escapeHtml(t)}">${escapeHtml(short)}</td>${cells}</tr>`;
+  }).join('');
+  const upct = (d.unanimous_ratio * 100).toFixed(0);
+  document.getElementById('sp-unanimous').innerHTML =
+    `<span class="tag ${d.unanimous_ratio >= 0.6 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'} text-xs">🤝 ${d.unanimous_count}/${total} bình luận toàn bộ mô hình đồng thuận (${upct}%)</span>`;
+
+  // ── 4. Insight summary ──
+  let parts = [];
+  parts.push(`🏆 <strong>F1 cao nhất:</strong> ${ranked[0].model_name} (${ranked[0].known_f1.toFixed(4)}) — kết hợp text + hành vi nên nhận biết tốt nhất`);
+  const weakest = ranked[ranked.length - 1];
+  parts.push(`📉 <strong>Yếu nhất:</strong> ${weakest.model_name} (${weakest.known_f1.toFixed(4)})`);
+  const tfidf = d.models.find(m => m.model_id === 'tfidf');
+  const xlmr = d.models.find(m => m.model_id === 'xlmr');
+  if (tfidf && xlmr && tfidf.available && xlmr.available) {
+    const tAgree = (tfidf.agreement_with_deployed * 100).toFixed(0);
+    const xAgree = (xlmr.agreement_with_deployed * 100).toFixed(0);
+    parts.push(`🧠 <strong>Neural sát Fusion hơn baseline:</strong> XLM-R đồng thuận ${xAgree}% vs TF-IDF ${tAgree}% — chứng tỏ hiểu ngữ cảnh giúp bám nhãn đúng tốt hơn bag-of-words`);
+  }
+  const disagreeN = total - d.unanimous_count;
+  if (disagreeN > 0) parts.push(`🔍 <strong>${disagreeN} bình luận gây tranh cãi</strong> (các mô hình dự đoán khác nhau) — xem ô viền đỏ ở bảng trên để thấy case khó`);
+  document.getElementById('sp-summary').innerHTML = parts.join(' &nbsp;·&nbsp; ');
+
+  show('sp-results');
+  document.getElementById('sp-results').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-function copyFbResults() {
-  const text    = document.getElementById('fb-text').value.trim();
-  const tbody   = document.getElementById('fb-metrics-tbody');
-  const summary = document.getElementById('fb-summary').innerText;
-  const rows    = [...tbody.querySelectorAll('tr')].map(r =>
-    [...r.querySelectorAll('td')].map(td=>td.innerText.trim()).join('\t')
-  ).join('\n');
-  const out = `Văn bản: ${text}\n\nKết quả so sánh:\n${rows}\n\nTóm tắt: ${summary}`;
-  navigator.clipboard.writeText(out).then(()=>alert('Đã copy kết quả vào clipboard!'));
+function clearThreadAnalysis() {
+  document.getElementById('sp-url').value = '';
+  document.getElementById('sp-comments').value = '';
+  setSpTabular(0, 0, 0);
+  updateSpCount();
+  hide('sp-results'); hide('sp-error'); hide('sp-fetch-status');
 }
+
+function copyThreadResults() {
+  if (!spData) return;
+  const lb = [...spData.models].sort((a, b) => b.known_f1 - a.known_f1)
+    .map((m, i) => `${i + 1}. ${m.model_name} — F1 ${m.known_f1.toFixed(4)}, Acc ${m.known_acc.toFixed(4)}` +
+      (m.available ? `, conf TB ${(m.avg_confidence * 100).toFixed(1)}%, đồng thuận Fusion ${(m.agreement_with_deployed * 100).toFixed(0)}%` : ', (không load)'))
+    .join('\n');
+  const dist = ORDER.filter(k => spData.thread_distribution[k] > 0)
+    .map(k => `${EMO[k].vi}: ${spData.thread_distribution[k]}`).join(', ');
+  const out = `Phân tích ${spData.n} bình luận\n\nPhân bố cảm xúc (Fusion): ${dist}\nĐồng thuận tuyệt đối: ${spData.unanimous_count}/${spData.n}\n\nBảng xếp hạng mô hình:\n${lb}`;
+  navigator.clipboard.writeText(out).then(() => alert('Đã copy kết quả vào clipboard!'));
+}
+
+function exportThreadCSV() {
+  if (!spData) return;
+  const avail = spData.models.filter(m => m.available);
+  const header = ['index', 'comment', ...avail.map(m => m.model_id), ...avail.map(m => m.model_id + '_conf')];
+  const rows = spData.texts.map((t, i) => {
+    const cells = [i + 1, '"' + String(t).replace(/"/g, '""') + '"'];
+    avail.forEach(m => cells.push(m.predictions[i].label));
+    avail.forEach(m => cells.push((m.predictions[i].confidence * 100).toFixed(2)));
+    return cells.join(',');
+  });
+  const csv = [header.join(','), ...rows].join('\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'viemotion_thread_4models.csv';
+  a.click();
+}
+
+// Init social tab defaults
+(function () {
+  try {
+    const k = localStorage.getItem('yt_api_key');
+    if (k) document.getElementById('sp-yt-key').value = k;
+  } catch (e) {}
+  selectPlatform('youtube');
+})();
 
 // ── Lightbox ──
 function openFig(src) {
