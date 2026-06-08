@@ -1633,6 +1633,7 @@ Thi xong rồi, nhẹ người hẳn!
         <table class="data-table" id="sp-metrics-table">
           <thead><tr>
             <th>Mô hình</th><th class="text-center">Kiến trúc</th>
+            <th class="text-center">Khả năng</th>
             <th class="text-right">F1-Macro ↑</th><th class="text-right">Accuracy ↑</th>
             <th class="text-right">Conf. TB (thread)</th><th class="text-right">Đồng thuận Fusion</th>
             <th class="text-center">Trạng thái</th>
@@ -2418,16 +2419,19 @@ function renderThreadResults(d) {
     const conf = m.available ? (m.avg_confidence * 100).toFixed(0) + '%' : '—';
     const agree = m.available ? (m.agreement_with_deployed * 100).toFixed(0) + '%' : '—';
     const deployTag = m.is_deployed ? '<span class="tag bg-indigo-600 text-white text-xs">Đang chạy</span>' : '';
+    const capBadges = (m.tags || []).filter(t => t !== 'Deployed').map(t =>
+      `<span class="tag ${s.badgeCls} text-xs">${t}</span>`).join('');
     return `<div class="flex items-center gap-3 p-2.5 rounded-lg border ${i === 0 ? 'border-amber-200 bg-amber-50/40' : 'border-slate-100'}">
       <div class="lb-rank" style="background:${medalBg[i]};color:${medalFg[i]}">${medals[i]}</div>
       <div class="flex-1 min-w-0">
         <div class="flex items-center gap-2 flex-wrap">
-          <span class="font-semibold text-sm text-slate-800">${m.model_name}</span>${deployTag}
+          <span class="font-semibold text-sm text-slate-800">${m.model_name}</span>${deployTag}${capBadges}
         </div>
         <div class="flex items-center gap-2 mt-1">
           <div class="prob-track flex-1" style="max-width:160px"><div class="prob-fill" style="width:${f1w}%;background:${s.f1Color}"></div></div>
           <span class="mono text-xs font-bold" style="color:${s.f1Color}">F1 ${m.known_f1.toFixed(4)}</span>
         </div>
+        ${m.note ? `<div class="text-xs text-slate-400 italic mt-0.5 leading-snug">${m.note}</div>` : ''}
       </div>
       <div class="text-right flex-shrink-0">
         <div class="text-xs text-slate-400">Conf TB / Đồng thuận</div>
@@ -2441,9 +2445,12 @@ function renderThreadResults(d) {
     const s = EXP_STYLE[m.model_id] || EXP_STYLE.tfidf;
     const conf = m.available ? (m.avg_confidence * 100).toFixed(1) + '%' : '—';
     const agree = m.available ? (m.agreement_with_deployed * 100).toFixed(0) + '%' : '—';
+    const capTags = (m.tags || []).filter(t => t !== 'Deployed').map(t =>
+      `<span class="tag ${s.badgeCls} text-xs">${t}</span>`).join(' ');
     return `<tr class="${m.is_deployed ? 'bg-indigo-50/40' : ''}">
       <td><span class="font-semibold text-sm ${m.is_deployed ? 'text-indigo-700' : 'text-slate-800'}">${m.model_name}</span></td>
       <td class="text-center"><span class="text-xs text-slate-500">${m.backbone}</span></td>
+      <td class="text-center">${capTags}</td>
       <td class="text-right mono font-bold" style="color:${s.f1Color}">${m.known_f1.toFixed(4)}</td>
       <td class="text-right mono text-slate-600">${m.known_acc.toFixed(4)}</td>
       <td class="text-right mono text-slate-700">${conf}</td>
@@ -2476,7 +2483,11 @@ function renderThreadResults(d) {
             <span class="mono text-xs text-slate-500 w-4 text-right">${m.distribution[k]}</span>
           </div>`; }).join('')}
       </div>
-      <div class="mt-2 pt-2 border-t border-slate-200 text-xs text-slate-400">${distinct} loại cảm xúc · conf TB ${(m.avg_confidence * 100).toFixed(0)}%</div>
+      <div class="mt-2 pt-2 border-t border-slate-200 text-xs text-slate-400">
+        <div class="flex flex-wrap gap-1 mb-1">${(m.tags || []).map(t => `<span class="tag ${s.badgeCls} text-xs">${t}</span>`).join('')}</div>
+        <div>${distinct} loại cảm xúc · conf TB ${(m.avg_confidence * 100).toFixed(0)}%</div>
+        ${m.note ? `<div class="mt-1 italic leading-snug">${m.note}</div>` : ''}
+      </div>
     </div>`;
   }).join('');
 
