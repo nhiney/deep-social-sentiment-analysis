@@ -2292,12 +2292,59 @@ function spStatus(ok, msg) {
   el.classList.remove('hidden');
 }
 
+function _ogMeta(html, prop) {
+  const pats = [
+    new RegExp('<meta[^>]+property=["\']og:' + prop + '["\'][^>]+content=["\']([^"\']*)["\']', 'i'),
+    new RegExp('<meta[^>]+content=["\']([^"\']*)["\'][^>]+property=["\']og:' + prop + '["\']', 'i'),
+  ];
+  for (const re of pats) {
+    const m = html.match(re);
+    if (m) return m[1].replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#039;/g,"'").replace(/&#39;/g,"'").trim();
+  }
+  return null;
+}
+
+async function _fetchFbClientSide(url, btn) {
+  const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+
+  if (isLocal) {
+    // Localhost: IP nhà không bị Facebook chặn — dùng server endpoint
+    try {
+      const resp = await fetch('/social/fetch', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({url, max_comments: 25}),
+      });
+      const data = await resp.json();
+      if (data.success && data.comments && data.comments.length) {
+        document.getElementById('sp-comments').value = data.comments.map(c => c.text.replace(/\s+/g,' ').trim()).join('\n');
+        updateSpCount();
+        spStatus(true, data.message + (data.source_title ? ' · <em>' + escapeHtml(data.source_title.slice(0,60)) + '</em>' : ''));
+      } else {
+        spStatus(false, data.message || 'Không đọc được — hãy dán thủ công.');
+      }
+    } catch(e) { spStatus(false, 'Lỗi kết nối: ' + e.message); }
+    btn.disabled = false; btn.style.opacity = '1';
+    return;
+  }
+
+  // Public server: Facebook chặn IP datacenter — hướng dẫn user paste thủ công
+  spStatus(false,
+    'Facebook chặn đọc tự động từ máy chủ công cộng. '
+    + '<a href="' + escapeHtml(url) + '" target="_blank" rel="noopener" '
+    + 'style="font-weight:600;text-decoration:underline;color:inherit;">① Mở bài viết ↗</a>'
+    + ' → ② chọn nội dung → ③ Ctrl+C → ④ dán vào ô bên dưới (Ctrl+V).');
+  btn.disabled = false; btn.style.opacity = '1';
+}
+
 async function fetchSocialContent() {
   const url = document.getElementById('sp-url').value.trim();
   if (!url) { spStatus(false, 'Vui lòng dán link bài viết.'); return; }
   const btn = document.getElementById('sp-fetch-btn');
   btn.disabled = true; btn.style.opacity = '.6';
   spStatus(true, 'Đang đọc bình luận...');
+
+  // Facebook: try client-side proxies first so request doesn't come from server datacenter IP
+  if (SP_PLATFORM === 'facebook') { await _fetchFbClientSide(url, btn); return; }
 
   const body = { url, max_comments: 25 };
   if (SP_PLATFORM === 'youtube') {
