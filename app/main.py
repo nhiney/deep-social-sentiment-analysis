@@ -471,18 +471,42 @@ def _fetch_reddit_comments(url: str, max_n: int) -> Dict[str, Any]:
 
 
 def _fetch_facebook_post(url: str) -> Dict[str, Any]:
-    """Facebook blocks comment scraping — return the public post body via OG tags."""
-    req_obj = _ureq.Request(url, headers={
-        "User-Agent": _FB_UA,
-        "Accept": "text/html,application/xhtml+xml",
-        "Accept-Language": "vi-VN,vi;q=0.9,en;q=0.8",
-    })
-    try:
-        with _ureq.urlopen(req_obj, timeout=12) as resp:
-            html_content = resp.read(120_000).decode("utf-8", errors="ignore")
-    except Exception as exc:
-        return {"success": False, "comments": [], "source_title": "",
-                "message": f"Không tải được trang Facebook: {exc}"}
+    """Facebook blocks comment scraping — return the public post body via OG tags.
+
+    Tries the original URL first, then mbasic.facebook.com as a fallback (lighter
+    page, sometimes reachable from datacenter IPs when www is blocked).
+    """
+    _BLOCK_MSG = (
+        "Facebook chặn đọc tự động từ máy chủ này. "
+        "Vui lòng mở bài viết trong trình duyệt, copy nội dung và dán vào ô bên dưới."
+    )
+
+    def _try_fetch(target: str) -> Optional[str]:
+        req = _ureq.Request(target, headers={
+            "User-Agent": _FB_UA,
+            "Accept": "text/html,application/xhtml+xml",
+            "Accept-Language": "vi-VN,vi;q=0.9,en;q=0.8",
+        })
+        try:
+            with _ureq.urlopen(req, timeout=12) as resp:
+                return resp.read(120_000).decode("utf-8", errors="ignore")
+        except Exception:
+            return None
+
+    parsed = urlparse(url)
+    variants = [url]
+    if parsed.netloc.lstrip("www.") == "facebook.com":
+        variants.append(parsed._replace(netloc="mbasic.facebook.com").geturl())
+
+    html_content: Optional[str] = None
+    for v in variants:
+        html_content = _try_fetch(v)
+        if html_content:
+            break
+
+    if not html_content:
+        return {"success": False, "comments": [], "source_title": "", "message": _BLOCK_MSG}
+
     desc = _og(html_content, "description")
     title = _og(html_content, "title") or ""
     if desc:
